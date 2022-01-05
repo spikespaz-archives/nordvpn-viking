@@ -1,10 +1,26 @@
 use gtk::prelude::{BoxExt, ButtonExt, DialogExt, GtkWindowExt, ToggleButtonExt, WidgetExt};
 use relm4::{send, AppUpdate, ComponentUpdate, Model, RelmApp, RelmComponent, Sender, Widgets};
 
+const DEFAULT_SIZE: Size = Size { x: 800, y: 600 };
+const MINIMUM_SIZE: Size = Size { x: 600, y: 400 };
+
+#[derive(Clone, Copy)]
+struct Size {
+    x: i32,
+    y: i32,
+}
+
+impl Size {
+    fn new(x: i32, y: i32) -> Self {
+        Size { x, y }
+    }
+}
+
 enum HeaderMsg {
-    View,
-    Edit,
-    Export,
+    Connect,
+    Account,
+    Settings,
+    OpenInfoDialog,
 }
 
 struct HeaderModel {}
@@ -28,15 +44,16 @@ impl ComponentUpdate<AppModel> for HeaderModel {
         parent_sender: Sender<AppMsg>,
     ) {
         match msg {
-            HeaderMsg::View => {
-                send!(parent_sender, AppMsg::SetMode(AppMode::View));
+            HeaderMsg::Connect => {
+                send!(parent_sender, AppMsg::SetMode(AppMode::Connect));
             }
-            HeaderMsg::Edit => {
-                send!(parent_sender, AppMsg::SetMode(AppMode::Edit));
+            HeaderMsg::Account => {
+                send!(parent_sender, AppMsg::SetMode(AppMode::Account));
             }
-            HeaderMsg::Export => {
-                send!(parent_sender, AppMsg::SetMode(AppMode::Export));
+            HeaderMsg::Settings => {
+                send!(parent_sender, AppMsg::SetMode(AppMode::Settings));
             }
+            HeaderMsg::OpenInfoDialog => {}
         }
     }
 }
@@ -45,33 +62,43 @@ impl ComponentUpdate<AppModel> for HeaderModel {
 impl Widgets<HeaderModel, AppModel> for HeaderWidgets {
     view! {
         gtk::HeaderBar {
+            pack_start = &gtk::Box {
+                append = &gtk::Button {
+                    set_icon_name: "dialog-information-symbolic",
+                    connect_clicked(sender) => move |_| {
+                        send!(sender, HeaderMsg::OpenInfoDialog);
+                    },
+                },
+            },
             set_title_widget = Some(&gtk::Box) {
-                add_css_class: "linked",
-                append: group = &gtk::ToggleButton {
-                    set_label: "View",
-                    set_active: true,
-                    connect_toggled(sender) => move |btn| {
-                        if btn.is_active() {
-                            send!(sender, HeaderMsg::View);
-                        }
+                append = &gtk::Box {
+                    add_css_class: "linked",
+                    append: group = &gtk::ToggleButton {
+                        set_label: "Connect",
+                        set_active: true,
+                        connect_toggled(sender) => move |btn| {
+                            if btn.is_active() {
+                                send!(sender, HeaderMsg::Connect);
+                            }
+                        },
                     },
-                },
-                append = &gtk::ToggleButton {
-                    set_label: "Edit",
-                    set_group: Some(&group),
-                    connect_toggled(sender) => move |btn| {
-                        if btn.is_active() {
-                            send!(sender, HeaderMsg::Edit);
-                        }
+                    append = &gtk::ToggleButton {
+                        set_label: "Account",
+                        set_group: Some(&group),
+                        connect_toggled(sender) => move |btn| {
+                            if btn.is_active() {
+                                send!(sender, HeaderMsg::Account);
+                            }
+                        },
                     },
-                },
-                append = &gtk::ToggleButton {
-                    set_label: "Export",
-                    set_group: Some(&group),
-                    connect_toggled(sender) => move |btn| {
-                        if btn.is_active() {
-                            send!(sender, HeaderMsg::Export);
-                        }
+                    append = &gtk::ToggleButton {
+                        set_label: "Settings",
+                        set_group: Some(&group),
+                        connect_toggled(sender) => move |btn| {
+                            if btn.is_active() {
+                                send!(sender, HeaderMsg::Settings);
+                            }
+                        },
                     },
                 },
             }
@@ -148,9 +175,9 @@ struct AppComponents {
 
 #[derive(Debug)]
 enum AppMode {
-    View,
-    Edit,
-    Export,
+    Connect,
+    Account,
+    Settings,
 }
 
 enum AppMsg {
@@ -161,6 +188,8 @@ enum AppMsg {
 
 struct AppModel {
     mode: AppMode,
+    unsaved: bool,
+    size: Option<Size>,
 }
 
 impl Model for AppModel {
@@ -173,12 +202,16 @@ impl Model for AppModel {
 impl Widgets<AppModel, ()> for AppWidgets {
     view! {
         main_window = gtk::ApplicationWindow {
-            set_default_width: 500,
-            set_default_height: 250,
+            set_size_request: args!(MINIMUM_SIZE.x, MINIMUM_SIZE.y),
+            set_default_width: model.size.unwrap_or(DEFAULT_SIZE).x,
+            set_default_height: model.size.unwrap_or(DEFAULT_SIZE).y,
             set_titlebar: Some(components.header.root_widget()),
             set_child = Some(&gtk::Label) {
                 set_label: watch!(&format!("Placeholder for {:?}", model.mode)),
             },
+            connect_fullscreened_notify(sender) => move |_| {},
+            connect_maximized_notify(sender) => move |_| {},
+            // connect_resize
             connect_close_request(sender) => move |_| {
                 send!(sender, AppMsg::CloseRequest);
                 gtk::Inhibit(true)
@@ -194,7 +227,11 @@ impl AppUpdate for AppModel {
                 self.mode = mode;
             }
             AppMsg::CloseRequest => {
-                components.dialog.send(DialogMsg::Show).unwrap();
+                if self.unsaved {
+                    components.dialog.send(DialogMsg::Show).unwrap();
+                } else {
+                    return false;
+                }
             }
             AppMsg::Close => {
                 return false;
@@ -206,7 +243,9 @@ impl AppUpdate for AppModel {
 
 fn main() {
     let model = AppModel {
-        mode: AppMode::View,
+        mode: AppMode::Connect,
+        unsaved: false,
+        size: None,
     };
     let relm = RelmApp::new(model);
     relm.run();
