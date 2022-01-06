@@ -18,35 +18,47 @@
                     </object>
                 </child>
                 <child type="title">
-                    <object class="GtkBox">
-                        <style>
-                            <class name="linked" />
-                        </style>
-                        <child>
-                            <object class="GtkToggleButton" id="headerbar_connect_button">
-                                <property name="label">Connect</property>
-                                <property name="active">True</property>
-                            </object>
-                        </child>
-                        <child>
-                            <object class="GtkToggleButton" id="headerbar_account_button">
-                                <property name="label">Account</property>
-                                <property name="group">headerbar_connect_button</property>
-                            </object>
-                        </child>
-                        <child>
-                            <object class="GtkToggleButton" id="headerbar_settings_button">
-                                <property name="label">Settings</property>
-                                <property name="group">headerbar_connect_button</property>
-                            </object>
-                        </child>
+                    <object class="GtkStackSwitcher">
+                        <property name="stack">pages_stack</property>
                     </object>
                 </child>
             </object>
         </child>
         <child>
-            <object class="GtkButton" id="button">
-                <property name="label">Press me!</property>
+            <object class="GtkStack" id="pages_stack">
+                <child>
+                    <object class="GtkStackPage">
+                        <property name="name">connect_page</property>
+                        <property name="title">Connect</property>
+                        <property name="child">
+                            <object class="GtkLabel">
+                                <property name="label">Connect Stack Page</property>
+                            </object>
+                        </property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkStackPage">
+                        <property name="name">account_page</property>
+                        <property name="title">Account</property>
+                        <property name="child">
+                            <object class="GtkLabel">
+                                <property name="label">Account Stack Page</property>
+                            </object>
+                        </property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkStackPage">
+                        <property name="name">settings_page</property>
+                        <property name="title">Settings</property>
+                        <property name="child">
+                            <object class="GtkLabel">
+                                <property name="label">Settings Stack Page</property>
+                            </object>
+                        </property>
+                    </object>
+                </child>
             </object>
         </child>
     </template>
