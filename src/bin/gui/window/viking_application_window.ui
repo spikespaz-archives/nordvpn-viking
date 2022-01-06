@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-    <object class="GtkApplicationWindow" id="window">
-        <property name="title">NordVPN</property>
+    <template class="VikingApplicationWindow" parent="GtkApplicationWindow">
+        <property name="title">NordVPN Viking</property>
         <property name="default-width">800</property>
         <property name="default-height">600</property>
         <property name="width-request">600</property>
@@ -49,5 +49,5 @@
                 <property name="label">Press me!</property>
             </object>
         </child>
-    </object>
+    </template>
 </interface>
