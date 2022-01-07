@@ -13,3 +13,35 @@ Aside from the Cargo dependencies whose licenses can be found on [crates.io](htt
 ## License
 
 This project is provided under the [Apache License, Version 2.0](https://opensource.org/licenses/Apache-2.0).
+
+<table>
+  <tr>
+    <th>&#x1F7E2; Permissions</th>
+    <th>&#x1F7E1; Conditions</th>
+    <th>&#x1F534; Limitations</th>
+  </tr>
+  <tr>
+    <td>
+      <ul>
+        <li>Commercial use</li>
+        <li>Distribution</li>
+        <li>Modification</li>
+        <li>Patent use</li>
+        <li>Private use</li>
+      </ul>
+    </td>
+    <td>
+      <ul>
+        <li>License and copyright notice</li>
+        <li>State changes</li>
+      </ul>
+    </td>
+    <td>
+      <ul>
+        <li>Liability</li>
+        <li>Trademark use</li>
+        <li>Warranty</li>
+      </ul>
+    </td>
+  </tr>
+</table>
