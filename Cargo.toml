@@ -10,6 +10,10 @@ repository = "https://github.com/spikespaz/nordvpn-viking"
 license = "Apache-2.0"
 publish = false
 
+[package.metadata.flag-icons]
+git = "https://github.com/lipis/flag-icons"
+commit = "1c50b81a5802532638f1fff93d50cfdd9975f09d"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -19,16 +23,12 @@ version = "0.3"
 package = "gtk4"
 
 [build-dependencies]
+toml = "0.5"
+slug = "0.1"
 
-[build-dependencies.reqwest]
-version = "0.11"
-features = [
-    "blocking"
-]
-
-[build-dependencies.zip]
-version = "0.5"
+[build-dependencies.git2]
+version = "0.13"
 default-features = false
 features = [
-    "deflate"
+    "https"
 ]
