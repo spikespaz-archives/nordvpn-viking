@@ -14,7 +14,8 @@ publish = false
 git = "https://github.com/lipis/flag-icons"
 commit = "1c50b81a5802532638f1fff93d50cfdd9975f09d"
 copy = [
-    ["flags/**/*.svg", "assets/flags/"]
+    ["flags/1x1/*.svg", "assets/flags/square"],
+    ["flags/4x3/*.svg", "assets/flags/rectangle"]
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
