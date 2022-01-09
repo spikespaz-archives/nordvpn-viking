@@ -10,9 +10,12 @@ repository = "https://github.com/spikespaz/nordvpn-viking"
 license = "Apache-2.0"
 publish = false
 
-[package.metadata.flag-icons]
+[package.metadata.foreign-dependencies.flag-icons]
 git = "https://github.com/lipis/flag-icons"
 commit = "1c50b81a5802532638f1fff93d50cfdd9975f09d"
+copy = [
+    ["flags/**/*.svg", "assets/flags/"]
+]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -23,8 +26,15 @@ version = "0.3"
 package = "gtk4"
 
 [build-dependencies]
-toml = "0.5"
+glob = "0.3"
 slug = "0.1"
+cargo_toml = "0.10"
+
+[build-dependencies.serde]
+version = "1.0"
+features = [
+    "derive"
+]
 
 [build-dependencies.git2]
 version = "0.13"
