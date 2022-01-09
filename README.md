@@ -1,5 +1,8 @@
 # Viking for NordVPN
 
+[![Status Badge](https://img.shields.io/endpoint?style=for-the-badge&url=https%3A%2F%2Fraw.githubusercontent.com%2Fspikespaz%2Fnordvpn-viking%2Fmaster%2F.github%2Fstatus_shield.json)](#)
+[![Functional Badge](https://img.shields.io/endpoint?style=for-the-badge&url=https%3A%2F%2Fraw.githubusercontent.com%2Fspikespaz%2Fnordvpn-viking%2Fmaster%2F.github%2Ffunctional_shield.json)](#)
+
 This project aims to provide a fully usable and feature-complete graphical interface for [NordVPN](https://nordvpn.com/) on Linux.
 
 While it attempts to closely model the look of the official applications for Windows and macOS, it is unique, being built with [Rust](https://www.rust-lang.org/) and [GTK](https://gtk-rs.org/).
