@@ -26,7 +26,12 @@ struct ForeignDependency {
 
 impl ForeignDependency {
     fn update<P: AsRef<Path>>(&self, out_dir: P) -> bool {
-        update_repository(&self.git, &self.commit, self.clone_path(&out_dir))
+        let updated = update_repository(&self.git, &self.commit, self.clone_path(&out_dir));
+        if updated {
+            self.copy_files(&out_dir);
+        }
+
+        updated
     }
 
     fn clone_path<P: AsRef<Path>>(&self, out_dir: P) -> PathBuf {
@@ -96,21 +101,8 @@ fn main() {
             continue;
         }
 
-        detail.copy_files(&out_dir);
         println!("Updated foreign dependency: {}", name);
     }
 
-    // let flag_icons_metadata = metadata["flag-icons"].as_table().unwrap();
-    // let flag_icons_git = flag_icons_metadata["git"].as_str().unwrap();
-    // let flag_icons_commit = flag_icons_metadata["commit"].as_str().unwrap();
-    // let flag_icons_clone_dest = out_dir.join(slugify(flag_icons_git));
-
-    // let result = update_repository(flag_icons_git, flag_icons_commit, flag_icons_clone_dest);
-
-    // println!("Repository updated: {}", result);
-
     panic!();
-
-    // let out_res_dir = out_dir.join("res");
-    // let out_res_icons_dir = out_dir.join("res/icons");
 }
