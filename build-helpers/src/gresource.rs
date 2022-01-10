@@ -12,13 +12,7 @@ pub struct GResources {
 pub struct GResource {
     pub prefix: String,
     #[serde(rename = "$value")]
-    pub entries: Vec<Entry>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-// #[serde(untagged)]
-pub enum Entry {
-    File(File),
+    pub files: Vec<File>,
 }
 
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -55,7 +49,7 @@ impl GResource {
     pub fn new(prefix: String) -> Self {
         Self {
             prefix,
-            entries: Vec::new(),
+            files: Vec::new(),
         }
     }
 }
@@ -113,7 +107,7 @@ mod tests {
     )]
     fn test_deserialize_file(xml: &str, expected: File) {
         let file: File = quick_xml::de::from_str(xml).unwrap();
-        assert_eq!(file, expected);
+        assert_eq!(expected, file);
     }
 
     #[test_case(
@@ -127,6 +121,6 @@ mod tests {
     )]
     fn test_serialize_file(file: File, expected: &str) {
         let xml = quick_xml::se::to_string(&file).unwrap();
-        assert_eq!(xml, expected);
+        assert_eq!(expected, xml);
     }
 }
