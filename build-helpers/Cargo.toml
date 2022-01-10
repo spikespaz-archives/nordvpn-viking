@@ -9,16 +9,17 @@ publish = false
 [dependencies]
 glob = "0.3"
 slug = "0.1"
+strong-xml = "0.6"
 cargo_toml = "0.10"
-
-[dependencies.quick-xml]
-version = "0.23.0-alpha3"
-features = [
-    "serialize"
-]
 
 [dependencies.serde]
 version = "1.0"
+features = [
+    "derive"
+]
+
+[dependencies.strum]
+version = "0.23"
 features = [
     "derive"
 ]
