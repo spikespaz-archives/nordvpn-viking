@@ -126,8 +126,14 @@ mod tests {
         assert_eq!(expected, &result);
     }
 
-    // fn test_serialize_file(file: &File, expected: &str) {
-    //     let xml = file.to_string().unwrap();
-    //     assert_eq!(expected, xml);
-    // }
+    #[test_case(&EXAMPLE_FILES[0].1, EXAMPLE_FILES[0].0 ; "test serialize file 1")]
+    #[test_case(&EXAMPLE_FILES[1].1, EXAMPLE_FILES[1].0 ; "test serialize file 2")]
+    #[test_case(&EXAMPLE_FILES[2].1, EXAMPLE_FILES[2].0 ; "test serialize file 3")]
+    #[test_case(&EXAMPLE_FILES[3].1, EXAMPLE_FILES[3].0 ; "test serialize file 4")]
+    #[test_case(&EXAMPLE_FILES[4].1, EXAMPLE_FILES[4].0 ; "test serialize file 5")]
+    #[test_case(&EXAMPLE_FILES[5].1, EXAMPLE_FILES[5].0 ; "test serialize file 6")]
+    fn test_serialize_file(file: &File, expected: &str) {
+        let xml = file.to_string().unwrap();
+        assert_eq!(expected, xml);
+    }
 }
