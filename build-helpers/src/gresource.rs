@@ -75,13 +75,7 @@ mod tests {
         }
     )]
     fn test_deserialize_file(xml: &str, expected: File) {
-            let config = ParserConfig::new()
-                .trim_whitespace(false)
-                .whitespace_to_characters(true);
-
-            let event_reader = EventReader::new_with_config(xml.as_bytes(), config);
-            let item = File::deserialize(&mut Deserializer::new(event_reader)).unwrap();
-
+        let item: File = serde_xml_rs::from_str(xml).unwrap();
             assert_eq!(item, expected);
     }
 }
