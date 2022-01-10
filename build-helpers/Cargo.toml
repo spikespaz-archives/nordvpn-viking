@@ -33,3 +33,4 @@ features = [
 
 [dev-dependencies]
 test-case = "2.0.0-rc1"
+once_cell = "1.9"

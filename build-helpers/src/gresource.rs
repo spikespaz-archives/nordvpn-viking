@@ -53,69 +53,81 @@ impl GResource {
 #[cfg(test)]
 mod tests {
     use crate::gresource::*;
+    use once_cell::sync::Lazy;
     use test_case::test_case;
 
-    #[test_case(
-        r#"<file>foo/bar/icon.png</file>"#,
-        File {
-            path: "foo/bar/icon.png".to_owned(),
-            alias: None,
-            compressed: false,
-            preprocess: None,
-        }
-    )]
-    #[test_case(
-        r#"<file alias="icon.png">foo/bar/icon.png</file>"#,
-        File {
-            path: "foo/bar/icon.png".to_owned(),
-            alias: Some("icon.png".to_owned()),
-            compressed: false,
-            preprocess: None,
-        }
-    )]
-    #[test_case(
-        r#"<file preprocess="to-pixdata">foo/bar/icon.png</file>"#,
-        File {
-            path: "foo/bar/icon.png".to_owned(),
-            alias: None,
-            compressed: false,
-            preprocess: Some(Preprocess::ToPixData),
-        }
-    )]
-    #[test_case(
-        r#"<file preprocess="xml-stripblanks">foo/bar/vector.svg</file>"#,
-        File {
-            path: "foo/bar/vector.svg".to_owned(),
-            alias: None,
-            compressed: false,
-            preprocess: Some(Preprocess::XmlStripBlanks),
-        }
-    )]
-    #[test_case(
-        r#"<file compressed="true" preprocess="to-pixdata">foo/bar/icon.png</file>"#,
-        File {
-            path: "foo/bar/icon.png".to_owned(),
-            alias: None,
-            compressed: true,
-            preprocess: Some(Preprocess::ToPixData),
-        }
-    )]
-    fn test_deserialize_file(xml: &str, expected: File) {
-        let file = File::from_str(xml).unwrap();
-        assert_eq!(expected, file);
+    static EXAMPLE_FILES: Lazy<[(&'static str, File); 6]> = Lazy::new(|| {
+        [
+            (
+                r#"<file>foo/bar/baz_1.png</file>"#,
+                File {
+                    path: "foo/bar/baz_1.png".to_owned(),
+                    alias: None,
+                    compressed: false,
+                    preprocess: None,
+                },
+            ),
+            (
+                r#"<file alias="image.png">foo/bar/baz_2.png</file>"#,
+                File {
+                    path: "foo/bar/baz_2.png".to_owned(),
+                    alias: Some("image.png".to_owned()),
+                    compressed: false,
+                    preprocess: None,
+                },
+            ),
+            (
+                r#"<file compressed="true">foo/bar/baz_3.png</file>"#,
+                File {
+                    path: "foo/bar/baz_3.png".to_owned(),
+                    alias: None,
+                    compressed: true,
+                    preprocess: None,
+                },
+            ),
+            (
+                r#"<file preprocess="to-pixdata">foo/bar/baz_4.png</file>"#,
+                File {
+                    path: "foo/bar/baz_4.png".to_owned(),
+                    alias: None,
+                    compressed: false,
+                    preprocess: Some(Preprocess::ToPixData),
+                },
+            ),
+            (
+                r#"<file alias="image.png" compressed="true" preprocess="to-pixdata">foo/bar/baz_5.png</file>"#,
+                File {
+                    path: "foo/bar/baz_5.png".to_owned(),
+                    alias: Some("image.png".to_owned()),
+                    compressed: true,
+                    preprocess: Some(Preprocess::ToPixData),
+                },
+            ),
+            (
+                r#"<file alias="icon.svg" compressed="true" preprocess="xml-stripblanks">foo/bar/baz_6.svg</file>"#,
+                File {
+                    path: "foo/bar/baz_6.svg".to_owned(),
+                    alias: Some("icon.svg".to_owned()),
+                    compressed: true,
+                    preprocess: Some(Preprocess::XmlStripBlanks),
+                },
+            ),
+        ]
+    });
+
+    #[test_case(EXAMPLE_FILES[0].0, &EXAMPLE_FILES[0].1 ; "test deserialize file 1")]
+    #[test_case(EXAMPLE_FILES[1].0, &EXAMPLE_FILES[1].1 ; "test deserialize file 2")]
+    #[test_case(EXAMPLE_FILES[2].0, &EXAMPLE_FILES[2].1 ; "test deserialize file 3")]
+    #[test_case(EXAMPLE_FILES[3].0, &EXAMPLE_FILES[3].1 ; "test deserialize file 4")]
+    #[test_case(EXAMPLE_FILES[4].0, &EXAMPLE_FILES[4].1 ; "test deserialize file 5")]
+    #[test_case(EXAMPLE_FILES[5].0, &EXAMPLE_FILES[5].1 ; "test deserialize file 6")]
+    fn test_deserialize_file(xml: &str, expected: &File) {
+        let result = File::from_str(xml).unwrap();
+        assert_eq!(expected, &result);
     }
 
-    #[test_case(
-        File {
-            path: "foo/bar/icon.png".to_owned(),
-            alias: None,
-            compressed: true,
-            preprocess: Some(Preprocess::ToPixData),
-        },
-        r#"<file compressed="true" preprocess="to-pixdata">foo/bar/icon.png</file>"#
-    )]
-    fn test_serialize_file(file: File, expected: &str) {
-        let xml = file.to_string().unwrap();
-        assert_eq!(expected, xml);
-    }
+    // fn test_serialize_file(file: &File, expected: &str) {
+    //     let xml = file.to_string().unwrap();
+    //     assert_eq!(expected, xml);
+    // }
 }
