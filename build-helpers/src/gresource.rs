@@ -63,9 +63,8 @@ impl GResource {
 #[cfg(test)]
 mod tests {
     use crate::gresource::*;
-    use serde_xml_rs::{from_str, to_string, Deserializer, Serializer};
+    use quick_xml;
     use test_case::test_case;
-    use xml::reader::{EventReader, ParserConfig};
 
     #[test_case(
         r#"<file>foo/bar/icon.png</file>"#,
@@ -113,7 +112,7 @@ mod tests {
         }
     )]
     fn test_deserialize_file(xml: &str, expected: File) {
-        let file: File = serde_xml_rs::from_str(xml).unwrap();
+        let file: File = quick_xml::de::from_str(xml).unwrap();
         assert_eq!(file, expected);
     }
 
@@ -127,7 +126,7 @@ mod tests {
         r#"<file compressed="true" preprocess="to-pixdata">foo/bar/icon.png</file>"#
     )]
     fn test_serialize_file(file: File, expected: &str) {
-        let xml = serde_xml_rs::to_string(&file).unwrap();
+        let xml = quick_xml::se::to_string(&file).unwrap();
         assert_eq!(xml, expected);
     }
 }
