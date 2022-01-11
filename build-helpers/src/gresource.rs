@@ -1,7 +1,7 @@
 use strong_xml::{XmlRead, XmlWrite};
 use strum;
 
-#[derive(Debug, Clone, PartialEq, XmlRead, XmlWrite)]
+#[derive(Debug, Default, Clone, PartialEq, XmlRead, XmlWrite)]
 #[xml(tag = "gresources")]
 pub struct GResources {
     #[xml(child = "gresource")]
@@ -38,10 +38,32 @@ pub enum Preprocess {
     ToPixData,
 }
 
+impl File {
+    pub fn new(
+        path: &str,
+        alias: Option<&str>,
+        compressed: Option<bool>,
+        preprocess: Option<Preprocess>,
+    ) -> Self {
+        Self {
+            path: path.to_owned(),
+            alias: alias.map(str::to_owned),
+            compressed,
+            preprocess,
+        }
+    }
+}
+
 impl GResources {
     pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl FromIterator<GResource> for GResources {
+    fn from_iter<I: IntoIterator<Item = GResource>>(iter: I) -> Self {
         Self {
-            entries: Vec::new(),
+            entries: Vec::from_iter(iter),
         }
     }
 }
@@ -51,6 +73,13 @@ impl GResource {
         Self {
             prefix: prefix.to_owned(),
             files: Vec::new(),
+        }
+    }
+
+    pub fn from_iter<I: IntoIterator<Item = File>>(prefix: &str, files: I) -> Self {
+        Self {
+            prefix: prefix.to_owned(),
+            files: Vec::from_iter(files),
         }
     }
 }
@@ -66,57 +95,37 @@ mod tests {
         [
             (
                 r#"<file>foo/bar/baz_1.png</file>"#,
-                File {
-                    path: "foo/bar/baz_1.png".to_owned(),
-                    alias: None,
-                    compressed: None,
-                    preprocess: None,
-                },
+                File::new("foo/bar/baz_1.png", None, None, None),
             ),
             (
-                r#"<file alias="image.png">foo/bar/baz_2.png</file>"#,
-                File {
-                    path: "foo/bar/baz_2.png".to_owned(),
-                    alias: Some("image.png".to_owned()),
-                    compressed: None,
-                    preprocess: None,
-                },
+                r#"<file alias="image_2.png">foo/bar/baz_2.png</file>"#,
+                File::new("foo/bar/baz_2.png", Some("image_2.png"), None, None),
             ),
             (
                 r#"<file compressed="true">foo/bar/baz_3.png</file>"#,
-                File {
-                    path: "foo/bar/baz_3.png".to_owned(),
-                    alias: None,
-                    compressed: Some(true),
-                    preprocess: None,
-                },
+                File::new("foo/bar/baz_3.png", None, Some(true), None),
             ),
             (
                 r#"<file preprocess="to-pixdata">foo/bar/baz_4.png</file>"#,
-                File {
-                    path: "foo/bar/baz_4.png".to_owned(),
-                    alias: None,
-                    compressed: None,
-                    preprocess: Some(Preprocess::ToPixData),
-                },
+                File::new("foo/bar/baz_4.png", None, None, Some(Preprocess::ToPixData)),
             ),
             (
-                r#"<file alias="image.png" compressed="true" preprocess="to-pixdata">foo/bar/baz_5.png</file>"#,
-                File {
-                    path: "foo/bar/baz_5.png".to_owned(),
-                    alias: Some("image.png".to_owned()),
-                    compressed: Some(true),
-                    preprocess: Some(Preprocess::ToPixData),
-                },
+                r#"<file alias="image_5.png" compressed="true" preprocess="to-pixdata">foo/bar/baz_5.png</file>"#,
+                File::new(
+                    "foo/bar/baz_5.png",
+                    Some("image_5.png"),
+                    Some(true),
+                    Some(Preprocess::ToPixData),
+                ),
             ),
             (
                 r#"<file alias="icon.svg" compressed="true" preprocess="xml-stripblanks">foo/bar/baz_6.svg</file>"#,
-                File {
-                    path: "foo/bar/baz_6.svg".to_owned(),
-                    alias: Some("icon.svg".to_owned()),
-                    compressed: Some(true),
-                    preprocess: Some(Preprocess::XmlStripBlanks),
-                },
+                File::new(
+                    "foo/bar/baz_6.svg",
+                    Some("icon.svg"),
+                    Some(true),
+                    Some(Preprocess::XmlStripBlanks),
+                ),
             ),
         ]
     });
@@ -132,24 +141,17 @@ mod tests {
                 )
                 .into_boxed_str(),
             ),
-            {
-                let mut gresource = GResource::new("/com/example/project/res");
-                gresource
-                    .files
-                    .extend(EXAMPLE_FILES.iter().map(|(_, file)| file.clone()));
-                gresource
-            },
+            GResource::from_iter(
+                "/com/example/project/res",
+                EXAMPLE_FILES.iter().map(|(_, file)| file.clone()),
+            ),
         )
     });
 
     static EXAMPLE_GRESOURCES: Lazy<(&'static str, GResources)> = Lazy::new(|| {
         (
             Box::leak(format!("<gresources>{}</gresources>", EXAMPLE_GRESOURCE.0).into_boxed_str()),
-            {
-                let mut gresources = GResources::new();
-                gresources.entries.extend([EXAMPLE_GRESOURCE.1.clone()]);
-                gresources
-            },
+            GResources::from_iter([EXAMPLE_GRESOURCE.1.clone()]),
         )
     });
 
