@@ -59,11 +59,8 @@ impl GResource {
 mod tests {
     use crate::gresource::*;
     use once_cell::sync::Lazy;
-    use regex::Regex;
     use std::fmt::Debug;
     use test_case::test_case;
-
-    static RE_XML_WHITESPACE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\n\s*").unwrap());
 
     static EXAMPLE_FILES: Lazy<[(&'static str, File); 6]> = Lazy::new(|| {
         [
@@ -127,16 +124,13 @@ mod tests {
     static EXAMPLE_GRESOURCE: Lazy<(&'static str, GResource)> = Lazy::new(|| {
         (
             Box::leak(
-                RE_XML_WHITESPACE.replace_all(r#"
-                    <gresource prefix="/com/example/project/res">
-                        <file compressed="false">foo/bar/baz_1.png</file>
-                        <file alias="image.png" compressed="false">foo/bar/baz_2.png</file>
-                        <file compressed="true">foo/bar/baz_3.png</file>
-                        <file compressed="false" preprocess="to-pixdata">foo/bar/baz_4.png</file>
-                        <file alias="image.png" compressed="true" preprocess="to-pixdata">foo/bar/baz_5.png</file>
-                        <file alias="icon.svg" compressed="true" preprocess="xml-stripblanks">foo/bar/baz_6.svg</file>
-                    </gresource>
-                "#, "").into_owned().into_boxed_str(),
+                format!(
+                    r#"<gresource prefix="/com/example/project/res">{}</gresource>"#,
+                    EXAMPLE_FILES
+                        .iter()
+                        .fold(String::new(), |xml_a, (xml_b, _)| xml_a + xml_b)
+                )
+                .into_boxed_str(),
             ),
             {
                 let mut gresource = GResource::new("/com/example/project/res");
