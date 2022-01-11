@@ -6,13 +6,16 @@ pub struct GResources {
     pub entries: Vec<GResource>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, XmlRead, XmlWrite)]
+#[xml(tag = "gresource")]
 pub struct GResource {
+    #[xml(attr = "prefix")]
     pub prefix: String,
+    #[xml(child = "file")]
     pub files: Vec<File>,
 }
 
-#[derive(Debug, Default, PartialEq, XmlRead, XmlWrite)]
+#[derive(Debug, Default, Clone, PartialEq, XmlRead, XmlWrite)]
 #[xml(tag = "file")]
 pub struct File {
     #[xml(text)]
@@ -25,7 +28,7 @@ pub struct File {
     pub preprocess: Option<Preprocess>,
 }
 
-#[derive(Debug, strum::Display, strum::EnumString, PartialEq)]
+#[derive(Debug, Clone, strum::Display, strum::EnumString, PartialEq)]
 pub enum Preprocess {
     #[strum(to_string = "xml-stripblanks")]
     XmlStripBlanks,
@@ -42,9 +45,9 @@ impl GResources {
 }
 
 impl GResource {
-    pub fn new(prefix: String) -> Self {
+    pub fn new(prefix: &str) -> Self {
         Self {
-            prefix,
+            prefix: prefix.to_owned(),
             files: Vec::new(),
         }
     }
@@ -115,6 +118,26 @@ mod tests {
         ]
     });
 
+    static EXAMPLE_GRESOURCE: Lazy<(&'static str, GResource)> = Lazy::new(|| {
+        (
+            Box::leak(r#"<gresource prefix="/com/example/project/res">
+                <file compressed="false">foo/bar/baz_1.png</file>
+                <file alias="image.png" compressed="false">foo/bar/baz_2.png</file>
+                <file compressed="true">foo/bar/baz_3.png</file>
+                <file compressed="false" preprocess="to-pixdata">foo/bar/baz_4.png</file>
+                <file alias="image.png" compressed="true" preprocess="to-pixdata">foo/bar/baz_5.png</file>
+                <file alias="icon.svg" compressed="true" preprocess="xml-stripblanks">foo/bar/baz_6.svg</file>
+            </gresource>"#.replace("\n", "").into_boxed_str()),
+            {
+                let mut gresource = GResource::new("/com/example/project/res");
+                gresource
+                    .files
+                    .extend(EXAMPLE_FILES.iter().map(|(_, file)| file.clone()));
+                gresource
+            },
+        )
+    });
+
     #[test_case(EXAMPLE_FILES[0].0, &EXAMPLE_FILES[0].1 ; "test deserialize file 1")]
     #[test_case(EXAMPLE_FILES[1].0, &EXAMPLE_FILES[1].1 ; "test deserialize file 2")]
     #[test_case(EXAMPLE_FILES[2].0, &EXAMPLE_FILES[2].1 ; "test deserialize file 3")]
@@ -134,6 +157,18 @@ mod tests {
     #[test_case(&EXAMPLE_FILES[5].1, EXAMPLE_FILES[5].0 ; "test serialize file 6")]
     fn test_serialize_file(file: &File, expected: &str) {
         let xml = file.to_string().unwrap();
+        assert_eq!(expected, xml);
+    }
+
+    #[test_case(EXAMPLE_GRESOURCE.0, &EXAMPLE_GRESOURCE.1 ; "test deserialze gresource 1")]
+    fn test_deserialize_gresource(xml: &str, expected: &GResource) {
+        let result = GResource::from_str(xml).unwrap();
+        assert_eq!(expected, &result);
+    }
+
+    #[test_case(&EXAMPLE_GRESOURCE.1, EXAMPLE_GRESOURCE.0 ; "test serialze gresource 1")]
+    fn test_serialize_gresource(gresource: &GResource, expected: &str) {
+        let xml = gresource.to_string().unwrap();
         assert_eq!(expected, xml);
     }
 }
