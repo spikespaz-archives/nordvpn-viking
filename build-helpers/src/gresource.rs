@@ -151,8 +151,12 @@ mod tests {
     #[test_case(EXAMPLE_FILES[3].0, &EXAMPLE_FILES[3].1 ; "test deserialize file 4")]
     #[test_case(EXAMPLE_FILES[4].0, &EXAMPLE_FILES[4].1 ; "test deserialize file 5")]
     #[test_case(EXAMPLE_FILES[5].0, &EXAMPLE_FILES[5].1 ; "test deserialize file 6")]
-    fn test_deserialize_file(xml: &str, expected: &File) {
-        let result = File::from_str(xml).unwrap();
+    #[test_case(EXAMPLE_GRESOURCE.0, &EXAMPLE_GRESOURCE.1 ; "test deserialze gresource 1")]
+    fn test_deserialize<'a, T>(xml: &'a str, expected: &T)
+    where
+        T: XmlRead<'a> + Debug + PartialEq,
+    {
+        let result = T::from_str(xml).unwrap();
         assert_eq!(expected, &result);
     }
 
@@ -162,20 +166,12 @@ mod tests {
     #[test_case(&EXAMPLE_FILES[3].1, EXAMPLE_FILES[3].0 ; "test serialize file 4")]
     #[test_case(&EXAMPLE_FILES[4].1, EXAMPLE_FILES[4].0 ; "test serialize file 5")]
     #[test_case(&EXAMPLE_FILES[5].1, EXAMPLE_FILES[5].0 ; "test serialize file 6")]
-    fn test_serialize_file(file: &File, expected: &str) {
-        let xml = file.to_string().unwrap();
-        assert_eq!(expected, xml);
-    }
-
-    #[test_case(EXAMPLE_GRESOURCE.0, &EXAMPLE_GRESOURCE.1 ; "test deserialze gresource 1")]
-    fn test_deserialize_gresource(xml: &str, expected: &GResource) {
-        let result = GResource::from_str(xml).unwrap();
-        assert_eq!(expected, &result);
-    }
-
     #[test_case(&EXAMPLE_GRESOURCE.1, EXAMPLE_GRESOURCE.0 ; "test serialze gresource 1")]
-    fn test_serialize_gresource(gresource: &GResource, expected: &str) {
-        let xml = gresource.to_string().unwrap();
+    fn test_serialize<T>(data: &T, expected: &str)
+    where
+        T: XmlWrite + PartialEq,
+    {
+        let xml = data.to_string().unwrap();
         assert_eq!(expected, xml);
     }
 }
