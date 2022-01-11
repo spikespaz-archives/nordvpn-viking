@@ -1,12 +1,14 @@
 use strong_xml::{XmlRead, XmlWrite};
 use strum;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, XmlRead, XmlWrite)]
+#[xml(tag = "gresources")]
 pub struct GResources {
+    #[xml(child = "gresource")]
     pub entries: Vec<GResource>,
 }
 
-#[derive(Debug, PartialEq, XmlRead, XmlWrite)]
+#[derive(Debug, Clone, PartialEq, XmlRead, XmlWrite)]
 #[xml(tag = "gresource")]
 pub struct GResource {
     #[xml(attr = "prefix")]
@@ -58,6 +60,7 @@ mod tests {
     use crate::gresource::*;
     use once_cell::sync::Lazy;
     use regex::Regex;
+    use std::fmt::Debug;
     use test_case::test_case;
 
     static RE_XML_WHITESPACE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\n\s*").unwrap());
@@ -145,13 +148,25 @@ mod tests {
         )
     });
 
+    static EXAMPLE_GRESOURCES: Lazy<(&'static str, GResources)> = Lazy::new(|| {
+        (
+            Box::leak(format!("<gresources>{}</gresources>", EXAMPLE_GRESOURCE.0).into_boxed_str()),
+            {
+                let mut gresources = GResources::new();
+                gresources.entries.extend([EXAMPLE_GRESOURCE.1.clone()]);
+                gresources
+            },
+        )
+    });
+
     #[test_case(EXAMPLE_FILES[0].0, &EXAMPLE_FILES[0].1 ; "test deserialize file 1")]
     #[test_case(EXAMPLE_FILES[1].0, &EXAMPLE_FILES[1].1 ; "test deserialize file 2")]
     #[test_case(EXAMPLE_FILES[2].0, &EXAMPLE_FILES[2].1 ; "test deserialize file 3")]
     #[test_case(EXAMPLE_FILES[3].0, &EXAMPLE_FILES[3].1 ; "test deserialize file 4")]
     #[test_case(EXAMPLE_FILES[4].0, &EXAMPLE_FILES[4].1 ; "test deserialize file 5")]
     #[test_case(EXAMPLE_FILES[5].0, &EXAMPLE_FILES[5].1 ; "test deserialize file 6")]
-    #[test_case(EXAMPLE_GRESOURCE.0, &EXAMPLE_GRESOURCE.1 ; "test deserialze gresource 1")]
+    #[test_case(EXAMPLE_GRESOURCE.0, &EXAMPLE_GRESOURCE.1 ; "test deserialze gresource")]
+    #[test_case(EXAMPLE_GRESOURCES.0, &EXAMPLE_GRESOURCES.1 ; "test deserialze gresources")]
     fn test_deserialize<'a, T>(xml: &'a str, expected: &T)
     where
         T: XmlRead<'a> + Debug + PartialEq,
@@ -166,7 +181,8 @@ mod tests {
     #[test_case(&EXAMPLE_FILES[3].1, EXAMPLE_FILES[3].0 ; "test serialize file 4")]
     #[test_case(&EXAMPLE_FILES[4].1, EXAMPLE_FILES[4].0 ; "test serialize file 5")]
     #[test_case(&EXAMPLE_FILES[5].1, EXAMPLE_FILES[5].0 ; "test serialize file 6")]
-    #[test_case(&EXAMPLE_GRESOURCE.1, EXAMPLE_GRESOURCE.0 ; "test serialze gresource 1")]
+    #[test_case(&EXAMPLE_GRESOURCE.1, EXAMPLE_GRESOURCE.0 ; "test serialze gresource")]
+    #[test_case(&EXAMPLE_GRESOURCES.1, EXAMPLE_GRESOURCES.0 ; "test serialze gresources")]
     fn test_serialize<T>(data: &T, expected: &str)
     where
         T: XmlWrite + PartialEq,
