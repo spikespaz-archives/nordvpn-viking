@@ -65,7 +65,8 @@ mod tests {
     static EXAMPLE_FILES: Lazy<[(&'static str, File); 6]> = Lazy::new(|| {
         [
             (
-                r#"<file>foo/bar/baz_1.png</file>"#,
+                r#"<file compressed="false">foo/bar/baz_1.png</file>"#,
+                // r#"<file>foo/bar/baz_1.png</file>"#,
                 File {
                     path: "foo/bar/baz_1.png".to_owned(),
                     alias: None,
@@ -74,7 +75,8 @@ mod tests {
                 },
             ),
             (
-                r#"<file alias="image.png">foo/bar/baz_2.png</file>"#,
+                r#"<file alias="image.png" compressed="false">foo/bar/baz_2.png</file>"#,
+                // r#"<file alias="image.png">foo/bar/baz_2.png</file>"#,
                 File {
                     path: "foo/bar/baz_2.png".to_owned(),
                     alias: Some("image.png".to_owned()),
@@ -92,7 +94,8 @@ mod tests {
                 },
             ),
             (
-                r#"<file preprocess="to-pixdata">foo/bar/baz_4.png</file>"#,
+                r#"<file compressed="false" preprocess="to-pixdata">foo/bar/baz_4.png</file>"#,
+                // r#"<file preprocess="to-pixdata">foo/bar/baz_4.png</file>"#,
                 File {
                     path: "foo/bar/baz_4.png".to_owned(),
                     alias: None,
