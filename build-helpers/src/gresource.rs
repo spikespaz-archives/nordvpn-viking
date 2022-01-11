@@ -25,7 +25,7 @@ pub struct File {
     #[xml(default, attr = "alias")]
     pub alias: Option<String>,
     #[xml(default, attr = "compressed")]
-    pub compressed: bool,
+    pub compressed: Option<bool>,
     #[xml(default, attr = "preprocess")]
     pub preprocess: Option<Preprocess>,
 }
@@ -65,22 +65,20 @@ mod tests {
     static EXAMPLE_FILES: Lazy<[(&'static str, File); 6]> = Lazy::new(|| {
         [
             (
-                r#"<file compressed="false">foo/bar/baz_1.png</file>"#,
-                // r#"<file>foo/bar/baz_1.png</file>"#,
+                r#"<file>foo/bar/baz_1.png</file>"#,
                 File {
                     path: "foo/bar/baz_1.png".to_owned(),
                     alias: None,
-                    compressed: false,
+                    compressed: None,
                     preprocess: None,
                 },
             ),
             (
-                r#"<file alias="image.png" compressed="false">foo/bar/baz_2.png</file>"#,
-                // r#"<file alias="image.png">foo/bar/baz_2.png</file>"#,
+                r#"<file alias="image.png">foo/bar/baz_2.png</file>"#,
                 File {
                     path: "foo/bar/baz_2.png".to_owned(),
                     alias: Some("image.png".to_owned()),
-                    compressed: false,
+                    compressed: None,
                     preprocess: None,
                 },
             ),
@@ -89,17 +87,16 @@ mod tests {
                 File {
                     path: "foo/bar/baz_3.png".to_owned(),
                     alias: None,
-                    compressed: true,
+                    compressed: Some(true),
                     preprocess: None,
                 },
             ),
             (
-                r#"<file compressed="false" preprocess="to-pixdata">foo/bar/baz_4.png</file>"#,
-                // r#"<file preprocess="to-pixdata">foo/bar/baz_4.png</file>"#,
+                r#"<file preprocess="to-pixdata">foo/bar/baz_4.png</file>"#,
                 File {
                     path: "foo/bar/baz_4.png".to_owned(),
                     alias: None,
-                    compressed: false,
+                    compressed: None,
                     preprocess: Some(Preprocess::ToPixData),
                 },
             ),
@@ -108,7 +105,7 @@ mod tests {
                 File {
                     path: "foo/bar/baz_5.png".to_owned(),
                     alias: Some("image.png".to_owned()),
-                    compressed: true,
+                    compressed: Some(true),
                     preprocess: Some(Preprocess::ToPixData),
                 },
             ),
@@ -117,7 +114,7 @@ mod tests {
                 File {
                     path: "foo/bar/baz_6.svg".to_owned(),
                     alias: Some("icon.svg".to_owned()),
-                    compressed: true,
+                    compressed: Some(true),
                     preprocess: Some(Preprocess::XmlStripBlanks),
                 },
             ),
