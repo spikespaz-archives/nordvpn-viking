@@ -1,12 +1,15 @@
 pub mod common;
-pub mod foreign_dependencies;
-pub mod git;
+pub mod fdependencies;
 pub mod gresources;
-pub mod manifest;
+
+pub mod manifest {
+    pub use crate::fdependencies::manifest::*;
+    pub use crate::gresources::manifest::*;
+}
 
 pub mod prelude {
     pub use crate::common::*;
-    pub use crate::foreign_dependencies::*;
+    pub use crate::fdependencies::*;
     pub use crate::gresources::*;
     pub use crate::manifest::*;
 }
