@@ -9,6 +9,7 @@ use std::path::PathBuf;
 #[serde(rename_all = "kebab-case")]
 struct Metadata {
     pub foreign_dependencies: ForeignDepsSet,
+    pub gresources: GResourceSet,
 }
 
 fn main() {
@@ -27,6 +28,8 @@ fn main() {
 
         println!("Updated foreign dependency: {}", name);
     }
+
+    println!("{:#?}", metadata.gresources);
 
     panic!();
 }
