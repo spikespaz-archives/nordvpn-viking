@@ -1,11 +1,11 @@
 use crate::foreign_dependencies::ForeignDependency;
-use crate::gresources::{File, GResource, Preprocess};
+use crate::gresources::{File, GResource, GResources, Preprocess};
 use glob::glob;
 use serde::Deserialize;
 use std::{collections::BTreeMap, path::Path};
 
-pub type ForeignDepsSet = BTreeMap<String, ForeignDependency>;
-pub type GResourceSet = BTreeMap<String, GResourceDetail>;
+#[derive(Debug, Deserialize)]
+pub struct ForeignDependenciesDetail(BTreeMap<String, ForeignDependency>);
 
 #[derive(Debug, Deserialize)]
 pub struct GResourceFilesDetail {
@@ -24,6 +24,21 @@ pub struct GResourceDetail {
 pub struct GResourceFilesDetailIter<'a> {
     inner: &'a GResourceFilesDetail,
     glob: glob::Paths,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GResourcesDetail(BTreeMap<String, GResourceDetail>);
+
+impl ForeignDependenciesDetail {
+    pub fn update_all<P: AsRef<Path>>(&self, out_dir: P) {
+        for (_, detail) in self.0.iter() {
+            let updated = detail.update(&out_dir);
+
+            if !updated {
+                continue;
+            }
+        }
+    }
 }
 
 impl GResourceFilesDetail {
@@ -66,5 +81,15 @@ impl GResourceDetail {
     pub fn to_gresource<P: AsRef<Path>>(&self, src_dir: P) -> GResource {
         let files = self.files.iter().flat_map(|detail| detail.expand(&src_dir));
         GResource::from_iter(self.prefix.clone(), files)
+    }
+}
+
+impl GResourcesDetail {
+    pub fn to_gresources<P: AsRef<Path>>(&self, src_dir: P) -> GResources {
+        GResources::from_iter(
+            self.0
+                .iter()
+                .map(|(_, detail)| detail.to_gresource(&src_dir)),
+        )
     }
 }
