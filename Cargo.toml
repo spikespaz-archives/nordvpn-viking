@@ -23,6 +23,15 @@ copy = [
     ["flags/4x3/*.svg", "assets/flags/rectangle"]
 ]
 
+[package.metadata.gresources.ui]
+prefix = "/com/github/spikespaz/nordvpn-viking/ui"
+
+[[package.metadata.gresources.ui.files]]
+glob = "assets/ui/*.ui"
+alias = "{}"
+compressed = true
+preprocess = "xml-stripblanks"
+
 [package.metadata.gresources.flag-icons]
 prefix = "/com/github/spikespaz/nordvpn-viking/flags"
 

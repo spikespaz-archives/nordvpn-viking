@@ -8,11 +8,13 @@ use std::path::PathBuf;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 struct Metadata {
+    copy_files: GlobCopySet,
     foreign_dependencies: ForeignDependenciesDetail,
     gresources: GResourcesDetail,
 }
 
 fn main() {
+    let curr_dir = PathBuf::from(env::current_dir().unwrap());
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let manifest: Manifest<Metadata> = Manifest::from_path_with_metadata("Cargo.toml").unwrap();
     let metadata = manifest.package.unwrap().metadata.unwrap();
@@ -20,11 +22,7 @@ fn main() {
     println!("Output directory: {:?}", out_dir);
     // println!("Manifest: {:#?}", manifest);
 
-    for (name, detail) in metadata.foreign_dependencies.into_iter() {
-        let updated = detail.update(&out_dir);
-        if !updated {
-            continue;
-        }
+    copy_globs(&metadata.copy_files, &curr_dir, &out_dir);
 
     metadata.foreign_dependencies.update_all(&out_dir);
 

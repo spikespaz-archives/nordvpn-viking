@@ -3,7 +3,7 @@ use gtk::subclass::prelude::*;
 use gtk::{glib, CompositeTemplate};
 
 #[derive(Debug, Default, CompositeTemplate)]
-#[template(file = "viking_application_window.ui")]
+#[template(resource = "/com/github/spikespaz/nordvpn-viking/ui/application_window.ui")]
 pub struct VikingApplicationWindow {}
 
 #[glib::object_subclass]
