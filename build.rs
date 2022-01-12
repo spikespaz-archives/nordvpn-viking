@@ -8,8 +8,8 @@ use std::path::PathBuf;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 struct Metadata {
-    pub foreign_dependencies: ForeignDepsSet,
-    pub gresources: GResourceSet,
+    foreign_dependencies: ForeignDepsSet,
+    gresources: GResourceSet,
 }
 
 fn main() {
@@ -29,7 +29,18 @@ fn main() {
         println!("Updated foreign dependency: {}", name);
     }
 
-    println!("{:#?}", metadata.gresources);
+    let gresources = GResources::from_iter(
+        metadata
+            .gresources
+            .iter()
+            .map(|(_, detail)| detail.to_gresource(&out_dir)),
+    );
+
+    gresources.compile("assets/compiled.gresource");
+
+    gresources
+        .write("/home/jacob/Desktop/gresources.xml")
+        .unwrap();
 
     panic!();
 }

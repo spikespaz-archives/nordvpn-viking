@@ -69,17 +69,12 @@ impl GResources {
         fs::write(dest_file, self.to_string().unwrap())
     }
 
-    pub fn compile<P: AsRef<Path>, Q: AsRef<Path>>(&self, src_dir: P, dest_file: Q) {
-        let dest_file = dest_file.as_ref().canonicalize().unwrap();
-        let dest_dir = dest_file.parent().unwrap();
-        let xml_path = dest_dir.join("gresources.xml");
+    pub fn compile<P: AsRef<Path>>(&self, dest_file: P) {
+        let dest_file = dest_file.as_ref();
+        let xml_path = dest_file.with_extension("").with_extension("gresource.xml");
 
         self.write(&xml_path).unwrap();
-        gio::compile_resources(
-            src_dir,
-            xml_path.to_str().unwrap(),
-            dest_file.to_str().unwrap(),
-        );
+        gio::compile_resources("", xml_path.to_str().unwrap(), dest_file.to_str().unwrap());
     }
 }
 
