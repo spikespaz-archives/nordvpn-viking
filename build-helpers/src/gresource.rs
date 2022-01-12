@@ -1,3 +1,6 @@
+use serde::Deserialize;
+use std::fs;
+use std::path::Path;
 use strong_xml::{XmlRead, XmlWrite};
 use strum;
 
@@ -30,11 +33,13 @@ pub struct File {
     pub preprocess: Option<Preprocess>,
 }
 
-#[derive(Debug, Clone, strum::Display, strum::EnumString, PartialEq)]
+#[derive(Debug, Clone, Deserialize, strum::Display, strum::EnumString, PartialEq)]
 pub enum Preprocess {
     #[strum(to_string = "xml-stripblanks")]
+    #[serde(rename = "xml-stripblanks")]
     XmlStripBlanks,
     #[strum(to_string = "to-pixdata")]
+    #[serde(rename = "xml-stripblanks")]
     ToPixData,
 }
 
