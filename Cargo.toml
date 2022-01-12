@@ -18,6 +18,21 @@ copy = [
     ["flags/4x3/*.svg", "assets/flags/rectangle"]
 ]
 
+[package.metadata.gresources.flag-icons]
+prefix = "/com/github/spikespaz/nordvpn-viking/flags"
+
+[[package.metadata.gresources.flag-icons.files]]
+glob = "assets/flags/square/*.svg"
+alias = "flags/square/{}"
+compressed = true
+preprocess = "xml-stripblanks"
+
+[[package.metadata.gresources.flag-icons.files]]
+glob = "assets/flags/rectangle/*.svg"
+alias = "flags/rectangle/{}"
+compressed = true
+preprocess = "xml-stripblanks"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
