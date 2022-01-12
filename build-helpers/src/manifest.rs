@@ -28,16 +28,16 @@ pub struct GResourceDetail {
 }
 
 impl GResourceFilesDetail {
-    pub fn to_file_iter<P: AsRef<Path>>(&self, out_dir: P) -> GResourceFilesDetailIter {
-        GResourceFilesDetailIter::new(&self, out_dir)
+    pub fn to_file_iter<P: AsRef<Path>>(&self, src_dir: P) -> GResourceFilesDetailIter {
+        GResourceFilesDetailIter::new(&self, src_dir)
     }
 }
 
 impl<'a> GResourceFilesDetailIter<'a> {
-    pub fn new<P: AsRef<Path>>(inner: &'a GResourceFilesDetail, out_dir: P) -> Self {
+    pub fn new<P: AsRef<Path>>(inner: &'a GResourceFilesDetail, src_dir: P) -> Self {
         Self {
             inner,
-            glob: glob(out_dir.as_ref().to_str().unwrap()).unwrap(),
+            glob: glob(src_dir.as_ref().join(&inner.glob).to_str().unwrap()).unwrap(),
         }
     }
 }
@@ -64,11 +64,11 @@ impl Iterator for GResourceFilesDetailIter<'_> {
 }
 
 impl GResourceDetail {
-    pub fn to_gresource<P: AsRef<Path>>(&self, out_dir: P) -> GResource {
+    pub fn to_gresource<P: AsRef<Path>>(&self, src_dir: P) -> GResource {
         let files = self
             .files
             .iter()
-            .flat_map(|detail| detail.to_file_iter(&out_dir));
+            .flat_map(|detail| detail.to_file_iter(&src_dir));
         GResource::from_iter(self.prefix.clone(), files)
     }
 }
