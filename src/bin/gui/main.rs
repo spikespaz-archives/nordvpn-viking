@@ -1,8 +1,8 @@
+mod main_window;
 mod resources;
-mod window;
 
 use gtk::prelude::*;
-use window::VikingApplicationWindow;
+use main_window::VikingApplicationWindow;
 
 fn main() {
     resources::init();
