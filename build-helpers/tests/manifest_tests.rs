@@ -97,7 +97,7 @@ static EXAMPLE_FILES_DETAILS: Lazy<[([File; 3], GResourceFilesDetail); 2]> = Laz
 #[test_case(&EXAMPLE_FILES_DETAILS[0].1, &EXAMPLE_FILES_DETAILS[0].0 ; "test iter files details 1")]
 #[test_case(&EXAMPLE_FILES_DETAILS[1].1, &EXAMPLE_FILES_DETAILS[1].0 ; "test iter files details 2")]
 fn test_expand_files(detail: &GResourceFilesDetail, expected: &[File]) {
-    let gresources = detail.to_file_iter(&*FILES_DIR);
+    let gresources = detail.expand(&*FILES_DIR);
 
     for (result, expected) in Iterator::zip(gresources, expected.into_iter()) {
         assert_eq!(result, *expected);
