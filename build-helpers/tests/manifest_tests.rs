@@ -3,18 +3,11 @@ use build_helpers::{
     manifest::*,
 };
 use once_cell::sync::Lazy;
-use std::path::{Path, PathBuf};
-// use std::fmt::Debug;
-// use test_case::test_case;
+use std::path::PathBuf;
+use test_case::test_case;
 
-static FILES_DIR: Lazy<PathBuf> = Lazy::new(|| {
-    PathBuf::from(file!())
-        .canonicalize()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("files")
-});
+static FILES_DIR: Lazy<PathBuf> = Lazy::new(|| PathBuf::from("tests/files"));
+static TEMP_DIR: Lazy<PathBuf> = Lazy::new(|| PathBuf::from("target/tmp"));
 
 static EXAMPLE_FILES_DETAILS: Lazy<[([File; 3], GResourceFilesDetail); 2]> = Lazy::new(|| {
     [
@@ -52,7 +45,7 @@ static EXAMPLE_FILES_DETAILS: Lazy<[([File; 3], GResourceFilesDetail); 2]> = Laz
                 ),
             ],
             GResourceFilesDetail {
-                glob: "foo/baz_*.png".to_owned(),
+                glob: "assets/foo/baz_*.png".to_owned(),
                 alias: Some("images/{}".to_owned()),
                 compressed: Some(true),
                 preprocess: Some(Preprocess::ToPixData),
@@ -92,7 +85,7 @@ static EXAMPLE_FILES_DETAILS: Lazy<[([File; 3], GResourceFilesDetail); 2]> = Laz
                 ),
             ],
             GResourceFilesDetail {
-                glob: "bar/baz_*.png".to_owned(),
+                glob: "assets/bar/baz_*.png".to_owned(),
                 alias: Some("pictures/{}".to_owned()),
                 compressed: None,
                 preprocess: None,
@@ -101,7 +94,12 @@ static EXAMPLE_FILES_DETAILS: Lazy<[([File; 3], GResourceFilesDetail); 2]> = Laz
     ]
 });
 
-#[test]
-fn print_files_dir() {
-    println!("{}", FILES_DIR.to_str().unwrap());
+#[test_case(&EXAMPLE_FILES_DETAILS[0].1, &EXAMPLE_FILES_DETAILS[0].0 ; "test iter files details 1")]
+#[test_case(&EXAMPLE_FILES_DETAILS[1].1, &EXAMPLE_FILES_DETAILS[1].0 ; "test iter files details 2")]
+fn test_expand_files(detail: &GResourceFilesDetail, expected: &[File]) {
+    let gresources = detail.to_file_iter(&*FILES_DIR);
+
+    for (result, expected) in Iterator::zip(gresources, expected.into_iter()) {
+        assert_eq!(result, *expected);
+    }
 }
