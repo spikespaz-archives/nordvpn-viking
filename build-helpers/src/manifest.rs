@@ -2,8 +2,7 @@ use crate::foreign_dependencies::ForeignDependency;
 use crate::gresources::{File, GResource, Preprocess};
 use glob::glob;
 use serde::Deserialize;
-use std::collections::BTreeMap;
-use std::path::Path;
+use std::{collections::BTreeMap, path::Path};
 
 pub type ForeignDepsSet = BTreeMap<String, ForeignDependency>;
 pub type GResourceSet = BTreeMap<String, GResourceDetail>;

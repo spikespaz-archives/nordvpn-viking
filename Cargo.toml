@@ -10,6 +10,11 @@ repository = "https://github.com/spikespaz/nordvpn-viking"
 license = "Apache-2.0"
 publish = false
 
+[package.metadata]
+copy-files = [
+    ["src/bin/gui/ui/*.ui", "assets/ui"]
+]
+
 [package.metadata.foreign-dependencies.flag-icons]
 git = "https://github.com/lipis/flag-icons"
 commit = "1c50b81a5802532638f1fff93d50cfdd9975f09d"
