@@ -45,14 +45,14 @@ pub enum Preprocess {
 
 impl File {
     pub fn new(
-        path: &str,
-        alias: Option<&str>,
+        path: String,
+        alias: Option<String>,
         compressed: Option<bool>,
         preprocess: Option<Preprocess>,
     ) -> Self {
         Self {
-            path: path.to_owned(),
-            alias: alias.map(str::to_owned),
+            path,
+            alias,
             compressed,
             preprocess,
         }
@@ -74,16 +74,16 @@ impl FromIterator<GResource> for GResources {
 }
 
 impl GResource {
-    pub fn new(prefix: &str) -> Self {
+    pub fn new(prefix: String) -> Self {
         Self {
-            prefix: prefix.to_owned(),
+            prefix,
             files: Vec::new(),
         }
     }
 
-    pub fn from_iter<I: IntoIterator<Item = File>>(prefix: &str, files: I) -> Self {
+    pub fn from_iter<I: IntoIterator<Item = File>>(prefix: String, files: I) -> Self {
         Self {
-            prefix: prefix.to_owned(),
+            prefix: prefix,
             files: Vec::from_iter(files),
         }
     }
@@ -100,25 +100,35 @@ mod tests {
         [
             (
                 r#"<file>foo/bar/baz_1.png</file>"#,
-                File::new("foo/bar/baz_1.png", None, None, None),
+                File::new("foo/bar/baz_1.png".to_owned(), None, None, None),
             ),
             (
                 r#"<file alias="image_2.png">foo/bar/baz_2.png</file>"#,
-                File::new("foo/bar/baz_2.png", Some("image_2.png"), None, None),
+                File::new(
+                    "foo/bar/baz_2.png".to_owned(),
+                    Some("image_2.png".to_owned()),
+                    None,
+                    None,
+                ),
             ),
             (
                 r#"<file compressed="true">foo/bar/baz_3.png</file>"#,
-                File::new("foo/bar/baz_3.png", None, Some(true), None),
+                File::new("foo/bar/baz_3.png".to_owned(), None, Some(true), None),
             ),
             (
                 r#"<file preprocess="to-pixdata">foo/bar/baz_4.png</file>"#,
-                File::new("foo/bar/baz_4.png", None, None, Some(Preprocess::ToPixData)),
+                File::new(
+                    "foo/bar/baz_4.png".to_owned(),
+                    None,
+                    None,
+                    Some(Preprocess::ToPixData),
+                ),
             ),
             (
                 r#"<file alias="image_5.png" compressed="true" preprocess="to-pixdata">foo/bar/baz_5.png</file>"#,
                 File::new(
-                    "foo/bar/baz_5.png",
-                    Some("image_5.png"),
+                    "foo/bar/baz_5.png".to_owned(),
+                    Some("image_5.png".to_owned()),
                     Some(true),
                     Some(Preprocess::ToPixData),
                 ),
@@ -126,8 +136,8 @@ mod tests {
             (
                 r#"<file alias="icon.svg" compressed="true" preprocess="xml-stripblanks">foo/bar/baz_6.svg</file>"#,
                 File::new(
-                    "foo/bar/baz_6.svg",
-                    Some("icon.svg"),
+                    "foo/bar/baz_6.svg".to_owned(),
+                    Some("icon.svg".to_owned()),
                     Some(true),
                     Some(Preprocess::XmlStripBlanks),
                 ),
@@ -147,7 +157,7 @@ mod tests {
                 .into_boxed_str(),
             ),
             GResource::from_iter(
-                "/com/example/project/res",
+                "/com/example/project/res".to_owned(),
                 EXAMPLE_FILES.iter().map(|(_, file)| file.clone()),
             ),
         )
