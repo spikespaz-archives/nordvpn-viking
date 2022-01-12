@@ -109,7 +109,7 @@ impl GResource {
 
 #[cfg(test)]
 mod tests {
-    use crate::gresource::*;
+    use crate::gresources::*;
     use once_cell::sync::Lazy;
     use std::fmt::Debug;
     use test_case::test_case;
