@@ -3,18 +3,9 @@ use glob::glob;
 use serde::Deserialize;
 use slug::slugify;
 use std::{
-    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
 };
-
-type ForeignDepsSet = BTreeMap<String, ForeignDependency>;
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct Metadata {
-    pub foreign_dependencies: ForeignDepsSet,
-}
 
 #[derive(Debug, Deserialize)]
 pub struct ForeignDependency {

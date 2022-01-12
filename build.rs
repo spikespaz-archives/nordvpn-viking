@@ -1,6 +1,15 @@
 use build_helpers::prelude::*;
+use cargo_toml::Manifest;
+use serde;
+use serde::Deserialize;
 use std::env;
 use std::path::PathBuf;
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+struct Metadata {
+    pub foreign_dependencies: ForeignDepsSet,
+}
 
 fn main() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
