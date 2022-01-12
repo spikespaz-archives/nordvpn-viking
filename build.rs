@@ -36,11 +36,5 @@ fn main() {
             .map(|(_, detail)| detail.to_gresource(&out_dir)),
     );
 
-    gresources.compile("assets/compiled.gresource");
-
-    gresources
-        .write("/home/jacob/Desktop/gresources.xml")
-        .unwrap();
-
-    panic!();
+    gresources.compile(out_dir.join("assets/compiled.gresource"));
 }

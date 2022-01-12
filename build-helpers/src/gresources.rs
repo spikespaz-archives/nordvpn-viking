@@ -1,7 +1,5 @@
-use gio;
 use serde::Deserialize;
-use std::fs;
-use std::path::Path;
+use std::{fs, path::Path, process::Command};
 use strong_xml::{XmlRead, XmlWrite};
 use strum;
 
@@ -74,7 +72,19 @@ impl GResources {
         let xml_path = dest_file.with_extension("").with_extension("gresource.xml");
 
         self.write(&xml_path).unwrap();
-        gio::compile_resources("", xml_path.to_str().unwrap(), dest_file.to_str().unwrap());
+
+        let status = Command::new("glib-compile-resources")
+            .arg("--target")
+            .arg(dest_file)
+            .arg(xml_path)
+            .status()
+            .unwrap();
+
+        assert!(
+            status.success(),
+            "glib-compile-resources failed with exit status {}",
+            status
+        );
     }
 }
 
