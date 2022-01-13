@@ -50,6 +50,9 @@ preprocess = "xml-stripblanks"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+regex = "1.5"
+chrono = "0.4"
+once_cell = "1.9"
 
 [dependencies.gtk]
 version = "0.3"

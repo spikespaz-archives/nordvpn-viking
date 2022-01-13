@@ -1,0 +1,161 @@
+NORDVPN(1)										  NordVPN Manual									       NORDVPN(1)
+
+NAME
+       nordvpn - command-line interface of the NordVPN service
+
+SYNOPSIS
+       nordvpn <command> [arguments]
+
+DESCRIPTION
+       The NordVPN app for Linux protects your sensitive data with military-grade encryption, so that whatever you do online stays secure and private. More than 5000 servers worldwide. No logs
+       of your online activity. Secure up to 6 devices with a single account. Access online content securely, with no restrictions.
+
+COMMANDS
+       account
+	   Shows account information.
+
+       cities
+	   Shows a list of cities where servers are available.
+
+       connect, c
+	   Connects you to VPN.
+
+       countries
+	   Shows a list of countries where servers are available.
+
+       disconnect, d
+	   Disconnects you from VPN.
+
+       groups
+	   Shows a list of available server groups.
+
+       login
+	   Logs you in.
+
+       logout
+	   Logs you out.
+
+       rate
+	   Rate your last connection quality (1-5)
+
+       register
+	   Registers a new user account
+
+       set, s
+	   Sets a configuration option.
+
+       settings
+	   Shows current settings.
+
+       status
+	   Shows connection status.
+
+       whitelist
+	   Adds or removes an option from a whitelist.
+
+       help, h
+	   Display syntax for the given operation. If no operation was supplied, then the general syntax is shown.
+       version
+	   Display version and exit.
+
+OPTIONS
+       --help, -h
+	   Display syntax for the given operation. If no operation was supplied, then the general syntax is shown.
+
+       --version, -v
+	   Display version and exit.
+
+EXAMPLES
+       Example 1. Connect to a recommended server
+	   $ nordvpn connect
+
+       Example 2. Connect to a server in a specific country
+	   $ nordvpn connect Australia
+	   $ nordvpn connect Switzerland
+	   $ nordvpn connect Greece
+
+       Example 3. Connect to a server in a specific city
+	   $ nordvpn connect Sweden Stockholm
+	   $ nordvpn connect Australia Sydney
+	   $ nordvpn connect Japan Tokyo
+
+       Example 4. Connect to a server in a specific country using the country code
+	   $ nordvpn connect US
+	   $ nordvpn connect JP
+	   $ nordvpn connect AU
+
+       Example 5. Connect to a server in a specific group
+	   $ nordvpn connect P2P
+	   $ nordvpn connect The_Americas
+	   $ nordvpn connect Dedicated_IP
+
+       Example 6. Connect to a server in a specific group and country
+	   $ nordvpn connect --group P2P Germany
+
+       Example 7. Disconnect from VPN
+	   $ nordvpn disconnect
+
+       Example 8. Set a protocol
+	   $ nordvpn set protocol UDP
+	   $ nordvpn set protocol TCP
+
+       Example 9. Enable Kill Switch
+	   $ nordvpn set killswitch enabled
+
+       Example 10. Enable CyberSec
+	   $ nordvpn set cybersec enabled
+
+       Example 11. Enable auto-connect
+	   $ nordvpn set autoconnect enabled
+
+       Example 12. Enable auto-connect to specific country or city
+	   $ nordvpn set autoconnect enabled
+	   $ nordvpn set autoconnect enabled Australia
+	   $ nordvpn set autoconnect enabled Sweden Stockholm
+
+       Example 13. Enable obfuscation
+	   $ nordvpn set obfuscate enabled
+
+       Example 14. Enable notifications
+	   $ nordvpn set notify enabled
+
+       Example 15. Change technology
+	   $ nordvpn set technology NordLynx
+	   $ nordvpn set technology OpenVPN
+
+       Example 16. Whitelist port
+	   $ nordvpn whitelist add port 22
+	   $ nordvpn whitelist add port 23 protocol UDP
+	   $ nordvpn whitelist remove port 23
+	   $ nordvpn whitelist remove port 22 protocol TCP
+
+       Example 17. Whitelist ports
+	   $ nordvpn whitelist add ports 3000 5000
+	   $ nordvpn whitelist add ports 3000 5000 protocol UDP
+	   $ nordvpn whitelist remove port 3000 5000
+	   $ nordvpn whitelist remove port 3000 5000 protocol TCP
+
+       Example 18. Whitelist subnet
+	   $ nordvpn whitelist add subnet 192.168.0.0/16
+	   $ nordvpn whitelist remove subnet 192.168.0.0/16
+
+       Example 19. Whitelist ports and subnets removal
+	   $ nordvpn whitelist remove all
+
+       Example 20. Set custom DNS
+	   $ nordvpn set dns off
+	   $ nordvpn set dns 0.0.0.0 1.2.3.4
+
+BUGS
+       Our QA team did their best in hunting bugs before the release. But if it happens that we missed something, please report to support@nordvpn.com.
+
+NOTES
+       Note 1. CyberSec and custom DNS
+	   Enabling CyberSec disables custom DNS and vice versa.
+
+       Note 2. Nord Account login without graphical user interface
+	   1. Run nordvpn login command on your Linux device.  2. Open the provided link in the browser.  3. Complete the login procedure.  4. Right click on the Return to the app button and
+	   select Copy link address.  5. Run nordvpn login --callback <URL> with the previously copied URL.  6. Run nordvpn account to verify that login was successful.
+       Our customer support works 24/7 so if you have any questions or issues, drop us a line at support@nordvpn.com
+
+NordVPN 3.12.2										    2021-12-16										       NORDVPN(1)
