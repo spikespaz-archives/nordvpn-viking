@@ -21,8 +21,6 @@ pub struct Account {
     pub expires: NaiveDate,
 }
 
-static RE_LIST: Lazy<Regex> = Lazy::new(|| Regex::new(r#"(\w+)(?:,\s*|\s*$)"#).unwrap());
-
 pub struct NordVPN;
 
 impl NordVPN {
@@ -80,11 +78,8 @@ impl NordVPN {
         // }
 
         let output = std::str::from_utf8(&output.stdout)?;
-        let captures = RE_LIST
-            .captures_iter(output)
-            .map(|capture| capture[1].to_owned());
 
-        Ok(captures.collect())
+        Ok(Self::parse_list(output))
     }
 
     pub fn connect(option: &ConnectOption) -> CliResult<()> {
@@ -99,11 +94,8 @@ impl NordVPN {
         // }
 
         let output = std::str::from_utf8(&output.stdout)?;
-        let captures = RE_LIST
-            .captures_iter(output)
-            .map(|capture| capture[1].to_owned());
 
-        Ok(captures.collect())
+        Ok(Self::parse_list(output))
     }
 
     pub fn disconnect() -> CliResult<()> {
@@ -111,7 +103,15 @@ impl NordVPN {
     }
 
     pub fn groups() -> CliResult<Vec<String>> {
-        todo!();
+        let output = Command::new("nordvpn").arg("groups").output()?;
+
+        // if !output.status.success() {
+        //     return Err(std::error::Error(output.status));
+        // }
+
+        let output = std::str::from_utf8(&output.stdout)?;
+
+        Ok(Self::parse_list(output))
     }
 
     pub fn login() -> CliResult<()> {
@@ -164,6 +164,16 @@ impl NordVPN {
             .to_owned();
 
         Ok(capture)
+    }
+
+    fn parse_list(output: &str) -> Vec<String> {
+        static RE: Lazy<Regex> = Lazy::new(|| Regex::new(r#"(\w+)(?:,\s*|\s*$)"#).unwrap());
+
+        let captures = RE
+            .captures_iter(output)
+            .map(|capture| capture[1].to_owned());
+
+        captures.collect()
     }
 }
 
