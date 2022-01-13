@@ -31,10 +31,14 @@ pub struct NordVPN;
 
 impl NordVPN {
     pub fn account() -> CliResult<Option<Account>> {
-        static RE: Lazy<Regex> = Lazy::new(|| {
-            Regex::new(
-                r#"Email Address:\s+(.+)\s+VPN Service:\s+(\w+)\s+\(Expires on\s+(\w{3})\s+(\d+)(?:st|nd|rd|th),\s+(\d{4})\)"#
-            ).unwrap()
+        static RE_EMAIL: Lazy<Regex> =
+            Lazy::new(|| Regex::new(r#"Email Address:\s+(.+)\s+"#).unwrap());
+
+        static RE_ACTIVE: Lazy<Regex> =
+            Lazy::new(|| Regex::new(r#"VPN Service:\s+(\w+)\s+"#).unwrap());
+
+        static RE_EXPIRES: Lazy<Regex> = Lazy::new(|| {
+            Regex::new(r#"\(Expires on\s+(\w{3})\s+(\d+)(?:st|nd|rd|th),\s+(\d{4})\)"#).unwrap()
         });
 
         let output = Command::new("nordvpn").arg("account").output()?;
@@ -44,30 +48,46 @@ impl NordVPN {
         // }
 
         let output = std::str::from_utf8(&output.stdout)?;
-        let captures = RE.captures(output);
 
-        let captures = match captures {
-            Some(captures) => captures,
-            None => {
-                if output.contains("You are not logged in.") {
-                    return Ok(None);
-                } else {
-                    unreachable!();
-                }
+        if output.contains("You are not logged in.") {
+            return Ok(None);
+        }
+
+        let account = {
+            let email: String;
+            let active: bool;
+            let expires: NaiveDate;
+
+            if let Some(captures) = RE_EMAIL.captures(output) {
+                email = captures.get(1).unwrap().as_str().to_owned();
+            } else {
+                return Ok(None);
             }
-        };
 
-        let expires = format!(
-            "{}-{:02}-{}",
-            captures.get(3).unwrap().as_str(),
-            captures.get(4).unwrap().as_str(),
-            captures.get(5).unwrap().as_str()
-        );
+            if let Some(captures) = RE_ACTIVE.captures(output) {
+                active = captures.get(1).unwrap().as_str() == "Active";
+            } else {
+                return Ok(None);
+            }
 
-        let account = Account {
-            email: captures.get(1).unwrap().as_str().to_owned(),
-            active: captures.get(2).unwrap().as_str() == "Active",
-            expires: NaiveDate::parse_from_str(&expires, "%b-%d-%Y")?,
+            if let Some(captures) = RE_EXPIRES.captures(output) {
+                let date = format!(
+                    "{}-{:02}-{}",
+                    captures.get(1).unwrap().as_str(),
+                    captures.get(2).unwrap().as_str(),
+                    captures.get(3).unwrap().as_str()
+                );
+
+                expires = NaiveDate::parse_from_str(&date, "%b-%d-%Y")?;
+            } else {
+                return Ok(None);
+            }
+
+            Account {
+                email,
+                active,
+                expires,
+            }
         };
 
         Ok(Some(account))
