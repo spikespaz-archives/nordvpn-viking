@@ -2,9 +2,25 @@ use chrono::NaiveDate;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::process::Command;
+use thiserror::Error;
 
-type CliResult<T> = Result<T, Box<dyn std::error::Error>>;
+type CliResult<T> = Result<T, CliError>;
 
+#[derive(Debug, Error)]
+pub enum CliError {
+    #[error("unable to create command")]
+    IoError(#[from] std::io::Error),
+    #[error("command terminated unsuccessfully")]
+    FailedCommand(Command),
+    #[error("failed to get command output as UTF-8")]
+    BadEncoding(#[from] std::str::Utf8Error),
+    #[error("command output did not match as expected")]
+    NoMatch(Command),
+    #[error("failed to parse string as `NaiveDate`")]
+    BadDateFormat(#[from] chrono::ParseError),
+}
+
+#[derive(Debug)]
 pub enum ConnectOption {
     Country(String),
     Server(String),
@@ -41,11 +57,12 @@ impl NordVPN {
             Regex::new(r#"\(Expires on\s+(\w{3})\s+(\d+)(?:st|nd|rd|th),\s+(\d{4})\)"#).unwrap()
         });
 
-        let output = Command::new("nordvpn").arg("account").output()?;
+        let mut command = Command::new("nordvpn");
+        let output = command.arg("account").output()?;
 
-        // if !output.status.success() {
-        //     return Err(std::error::Error(output.status));
-        // }
+        if !output.status.success() {
+            return Err(CliError::FailedCommand(command));
+        }
 
         let output = std::str::from_utf8(&output.stdout)?;
 
@@ -61,13 +78,13 @@ impl NordVPN {
             if let Some(captures) = RE_EMAIL.captures(output) {
                 email = captures.get(1).unwrap().as_str().to_owned();
             } else {
-                return Ok(None);
+                return Err(CliError::NoMatch(command));
             }
 
             if let Some(captures) = RE_ACTIVE.captures(output) {
                 active = captures.get(1).unwrap().as_str() == "Active";
             } else {
-                return Ok(None);
+                return Err(CliError::NoMatch(command));
             }
 
             if let Some(captures) = RE_EXPIRES.captures(output) {
@@ -80,7 +97,7 @@ impl NordVPN {
 
                 expires = NaiveDate::parse_from_str(&date, "%b-%d-%Y")?;
             } else {
-                return Ok(None);
+                return Err(CliError::NoMatch(command));
             }
 
             Account {
@@ -94,14 +111,12 @@ impl NordVPN {
     }
 
     pub fn cities(country: &str) -> CliResult<Vec<String>> {
-        let output = Command::new("nordvpn")
-            .arg("cities")
-            .arg(country)
-            .output()?;
+        let mut command = Command::new("nordvpn");
+        let output = command.arg("cities").arg(country).output()?;
 
-        // if !output.status.success() {
-        //     return Err(std::error::Error(output.status));
-        // }
+        if !output.status.success() {
+            return Err(CliError::FailedCommand(command));
+        }
 
         let output = std::str::from_utf8(&output.stdout)?;
 
@@ -128,26 +143,31 @@ impl NordVPN {
 
         let output = command.output()?;
 
-        // if !output.status.success() {
-        //     return Err(std::error::Error(output.status));
-        // }
+        if !output.status.success() {
+            return Err(CliError::FailedCommand(command));
+        }
 
         let output = std::str::from_utf8(&output.stdout)?;
-        let captures = RE.captures(output).unwrap();
 
-        Ok(Connected {
-            country: captures.get(1).unwrap().as_str().to_owned(),
-            server: captures.get(2).unwrap().as_str().parse().unwrap(),
-            hostname: captures.get(3).unwrap().as_str().to_owned(),
-        })
+        let connected = match RE.captures(output) {
+            Some(captures) => Connected {
+                country: captures.get(1).unwrap().as_str().to_owned(),
+                server: captures.get(2).unwrap().as_str().parse().unwrap(),
+                hostname: captures.get(3).unwrap().as_str().to_owned(),
+            },
+            None => return Err(CliError::NoMatch(command)),
+        };
+
+        Ok(connected)
     }
 
     pub fn countries() -> CliResult<Vec<String>> {
-        let output = Command::new("nordvpn").arg("countries").output()?;
+        let mut command = Command::new("nordvpn");
+        let output = command.arg("countries").output()?;
 
-        // if !output.status.success() {
-        //     return Err(std::error::Error(output.status));
-        // }
+        if !output.status.success() {
+            return Err(CliError::FailedCommand(command));
+        }
 
         let output = std::str::from_utf8(&output.stdout)?;
 
@@ -159,11 +179,12 @@ impl NordVPN {
     }
 
     pub fn groups() -> CliResult<Vec<String>> {
-        let output = Command::new("nordvpn").arg("groups").output()?;
+        let mut command = Command::new("nordvpn");
+        let output = command.arg("groups").output()?;
 
-        // if !output.status.success() {
-        //     return Err(std::error::Error(output.status));
-        // }
+        if !output.status.success() {
+            return Err(CliError::FailedCommand(command));
+        }
 
         let output = std::str::from_utf8(&output.stdout)?;
 
@@ -203,21 +224,19 @@ impl NordVPN {
     pub fn version() -> CliResult<String> {
         static RE: Lazy<Regex> = Lazy::new(|| Regex::new(r#"(\d+\.\d+.\d+)\s+$"#).unwrap());
 
-        let output = Command::new("nordvpn").arg("version").output()?;
+        let mut command = Command::new("nordvpn");
+        let output = command.arg("version").output()?;
 
-        // if !output.status.success() {
-        //     return Err(std::error::Error(output.status));
-        // }
+        if !output.status.success() {
+            return Err(CliError::FailedCommand(command));
+        }
 
         let output = std::str::from_utf8(&output.stdout)?;
 
-        let capture = RE
-            .captures(output)
-            .unwrap()
-            .get(1)
-            .unwrap()
-            .as_str()
-            .to_owned();
+        let capture = match RE.captures(output) {
+            Some(captures) => captures.get(1).unwrap().as_str().to_owned(),
+            None => return Err(CliError::NoMatch(command)),
+        };
 
         Ok(capture)
     }

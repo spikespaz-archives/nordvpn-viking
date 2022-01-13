@@ -604,6 +604,7 @@ dependencies = [
  "once_cell",
  "regex",
  "serde",
+ "thiserror",
 ]
 
 [[package]]
