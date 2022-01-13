@@ -26,7 +26,7 @@ static RE_LIST: Lazy<Regex> = Lazy::new(|| Regex::new(r#"(\w+)(?:,\s*|\s*$)"#).u
 pub struct NordVPN;
 
 impl NordVPN {
-    pub fn account() -> CliResult<Account> {
+    pub fn account() -> CliResult<Option<Account>> {
         static RE: Lazy<Regex> = Lazy::new(|| {
             Regex::new(
                 r#"Email Address:\s+(.+)\s+VPN Service:\s+(\w+)\s+\(Expires on\s+(\w{3})\s+(\d+)(?:st|nd|rd|th),\s+(\d{4})\)"#
@@ -40,7 +40,19 @@ impl NordVPN {
         // }
 
         let output = std::str::from_utf8(&output.stdout)?;
-        let captures = RE.captures(output).unwrap();
+        let captures = RE.captures(output);
+
+        let captures = match captures {
+            Some(captures) => captures,
+            None => {
+                if output.contains("You are not logged in.") {
+                    return Ok(None);
+                } else {
+                    unreachable!();
+                }
+            }
+        };
+
         let expires = format!(
             "{}-{:02}-{}",
             captures.get(3).unwrap().as_str(),
@@ -54,7 +66,7 @@ impl NordVPN {
             expires: NaiveDate::parse_from_str(&expires, "%b-%d-%Y")?,
         };
 
-        Ok(account)
+        Ok(Some(account))
     }
 
     pub fn cities(country: &str) -> CliResult<Vec<String>> {
