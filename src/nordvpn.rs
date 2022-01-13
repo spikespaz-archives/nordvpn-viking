@@ -21,6 +21,12 @@ pub struct Account {
     pub expires: NaiveDate,
 }
 
+pub struct Connected {
+    pub country: String,
+    pub server: u32,
+    pub hostname: String,
+}
+
 pub struct NordVPN;
 
 impl NordVPN {
@@ -82,8 +88,38 @@ impl NordVPN {
         Ok(Self::parse_list(output))
     }
 
-    pub fn connect(option: &ConnectOption) -> CliResult<()> {
-        todo!();
+    pub fn connect(option: &ConnectOption) -> CliResult<Connected> {
+        static RE: Lazy<Regex> = Lazy::new(|| {
+            Regex::new(r#"You are connected to\s+([\w ]+)\s+#(\d+)\s+\(([\w\d\.]+)\)!"#).unwrap()
+        });
+
+        let mut command = Command::new("nordvpn");
+
+        command.arg("connect");
+
+        match option {
+            ConnectOption::Country(country) => command.arg(country),
+            ConnectOption::Server(server) => command.arg(server),
+            ConnectOption::CountryCode(country_code) => command.arg(country_code),
+            ConnectOption::City(city) => command.arg(city),
+            ConnectOption::Group(group) => command.arg(group),
+            ConnectOption::CountryCity(country, city) => command.arg(country).arg(city),
+        };
+
+        let output = command.output()?;
+
+        // if !output.status.success() {
+        //     return Err(std::error::Error(output.status));
+        // }
+
+        let output = std::str::from_utf8(&output.stdout)?;
+        let captures = RE.captures(output).unwrap();
+
+        Ok(Connected {
+            country: captures.get(1).unwrap().as_str().to_owned(),
+            server: captures.get(2).unwrap().as_str().parse().unwrap(),
+            hostname: captures.get(3).unwrap().as_str().to_owned(),
+        })
     }
 
     pub fn countries() -> CliResult<Vec<String>> {
