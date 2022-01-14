@@ -40,6 +40,7 @@ pub struct Account {
     pub expires: NaiveDate,
 }
 
+#[derive(Debug)]
 pub struct Connected {
     pub country: String,
     pub server: u32,
@@ -62,15 +63,12 @@ impl NordVPN {
 
         let mut command = Command::new("nordvpn");
         let output = command.arg("account").output()?;
+        let stdout = std::str::from_utf8(&output.stdout)?;
 
-        if !output.status.success() {
-            return Err(CliError::FailedCommand(command));
-        }
-
-        let output = std::str::from_utf8(&output.stdout)?;
-
-        if output.contains("You are not logged in.") {
+        if stdout.contains("You are not logged in.") {
             return Ok(None);
+        } else if !output.status.success() {
+            return Err(CliError::FailedCommand(command));
         }
 
         let account = {
@@ -78,19 +76,19 @@ impl NordVPN {
             let active: bool;
             let expires: NaiveDate;
 
-            if let Some(captures) = RE_EMAIL.captures(output) {
+            if let Some(captures) = RE_EMAIL.captures(stdout) {
                 email = captures.get(1).unwrap().as_str().to_owned();
             } else {
                 return Err(CliError::NoMatch(command));
             }
 
-            if let Some(captures) = RE_ACTIVE.captures(output) {
+            if let Some(captures) = RE_ACTIVE.captures(stdout) {
                 active = captures.get(1).unwrap().as_str() == "Active";
             } else {
                 return Err(CliError::NoMatch(command));
             }
 
-            if let Some(captures) = RE_EXPIRES.captures(output) {
+            if let Some(captures) = RE_EXPIRES.captures(stdout) {
                 let date = format!(
                     "{}-{:02}-{}",
                     captures.get(1).unwrap().as_str(),
@@ -116,14 +114,18 @@ impl NordVPN {
     pub fn cities(country: &str) -> CliResult<Vec<String>> {
         let mut command = Command::new("nordvpn");
         let output = command.arg("cities").arg(country).output()?;
+        let stdout = std::str::from_utf8(&output.stdout)?;
 
         if !output.status.success() {
             return Err(CliError::FailedCommand(command));
         }
 
-        let output = std::str::from_utf8(&output.stdout)?;
+        let cities = match Self::parse_list(stdout) {
+            Some(cities) => cities,
+            None => return Err(CliError::NoMatch(command)),
+        };
 
-        Ok(Self::parse_list(output))
+        Ok(cities)
     }
 
     pub fn connect(option: &ConnectOption) -> CliResult<Connected> {
@@ -145,14 +147,13 @@ impl NordVPN {
         };
 
         let output = command.output()?;
+        let stdout = std::str::from_utf8(&output.stdout)?;
 
         if !output.status.success() {
             return Err(CliError::FailedCommand(command));
         }
 
-        let output = std::str::from_utf8(&output.stdout)?;
-
-        let connected = match RE.captures(output) {
+        let connected = match RE.captures(stdout) {
             Some(captures) => Connected {
                 country: captures.get(1).unwrap().as_str().to_owned(),
                 server: captures.get(2).unwrap().as_str().parse().unwrap(),
@@ -167,14 +168,18 @@ impl NordVPN {
     pub fn countries() -> CliResult<Vec<String>> {
         let mut command = Command::new("nordvpn");
         let output = command.arg("countries").output()?;
+        let stdout = std::str::from_utf8(&output.stdout)?;
 
         if !output.status.success() {
             return Err(CliError::FailedCommand(command));
         }
 
-        let output = std::str::from_utf8(&output.stdout)?;
+        let countries = match Self::parse_list(stdout) {
+            Some(countries) => countries,
+            None => return Err(CliError::NoMatch(command)),
+        };
 
-        Ok(Self::parse_list(output))
+        Ok(countries)
     }
 
     pub fn disconnect() -> CliResult<()> {
@@ -184,14 +189,18 @@ impl NordVPN {
     pub fn groups() -> CliResult<Vec<String>> {
         let mut command = Command::new("nordvpn");
         let output = command.arg("groups").output()?;
+        let stdout = std::str::from_utf8(&output.stdout)?;
 
         if !output.status.success() {
             return Err(CliError::FailedCommand(command));
         }
 
-        let output = std::str::from_utf8(&output.stdout)?;
+        let groups = match Self::parse_list(stdout) {
+            Some(groups) => groups,
+            None => return Err(CliError::NoMatch(command)),
+        };
 
-        Ok(Self::parse_list(output))
+        Ok(groups)
     }
 
     pub fn login() -> CliResult<()> {
@@ -229,14 +238,13 @@ impl NordVPN {
 
         let mut command = Command::new("nordvpn");
         let output = command.arg("version").output()?;
+        let stdout = std::str::from_utf8(&output.stdout)?;
 
         if !output.status.success() {
             return Err(CliError::FailedCommand(command));
         }
 
-        let output = std::str::from_utf8(&output.stdout)?;
-
-        let capture = match RE.captures(output) {
+        let capture = match RE.captures(stdout) {
             Some(captures) => captures.get(1).unwrap().as_str().to_owned(),
             None => return Err(CliError::NoMatch(command)),
         };
@@ -244,14 +252,16 @@ impl NordVPN {
         Ok(Version::parse(&capture)?)
     }
 
-    fn parse_list(output: &str) -> Vec<String> {
+    fn parse_list(text: &str) -> Option<Vec<String>> {
         static RE: Lazy<Regex> = Lazy::new(|| Regex::new(r#"(\w+)(?:,\s*|\s*$)"#).unwrap());
 
-        let captures = RE
-            .captures_iter(output)
-            .map(|capture| capture[1].to_owned());
+        let mut captures = RE.captures_iter(text).map(|capture| capture).peekable();
 
-        captures.collect()
+        captures.peek()?;
+
+        let items = captures.map(|capture| capture.get(1).unwrap().as_str().to_owned());
+
+        Some(items.collect())
     }
 }
 
@@ -263,6 +273,18 @@ mod tests {
     #[test]
     fn test_nordvpn() {
         let version = NordVPN::version().unwrap();
+        println!("Version: {}", version);
         assert!(version >= Version::new(3, 12, 0));
+
+        let account = NordVPN::account().unwrap();
+        println!("Account: {:#?}", account);
+
+        let countries = NordVPN::countries().unwrap();
+        println!("Countries: {:?}", countries);
+
+        for country in countries {
+            let cities = NordVPN::cities(&country).unwrap();
+            println!("Cities in {}: {:?}", country, cities);
+        }
     }
 }
