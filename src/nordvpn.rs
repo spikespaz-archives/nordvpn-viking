@@ -71,12 +71,12 @@ impl NordVPN {
             email: if let Some(captures) = RE_EMAIL.captures(&stdout) {
                 captures.get(1).unwrap().as_str().to_owned()
             } else {
-                return Err(CliError::FailedCommand(command));
+                return Err(CliError::BadOutput(command));
             },
             active: if let Some(captures) = RE_ACTIVE.captures(&stdout) {
                 captures.get(1).unwrap().as_str() == "Active"
             } else {
-                return Err(CliError::FailedCommand(command));
+                return Err(CliError::BadOutput(command));
             },
             expires: if let Some(captures) = RE_EXPIRES.captures(&stdout) {
                 NaiveDate::parse_from_str(
@@ -89,7 +89,7 @@ impl NordVPN {
                     "%b-%d-%Y",
                 )?
             } else {
-                return Err(CliError::FailedCommand(command));
+                return Err(CliError::BadOutput(command));
             },
         };
 
