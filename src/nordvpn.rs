@@ -53,10 +53,8 @@ impl NordVPN {
     pub fn account() -> CliResult<Option<Account>> {
         static RE_EMAIL: Lazy<Regex> =
             Lazy::new(|| Regex::new(r#"Email Address:\s+(.+)\s+"#).unwrap());
-
         static RE_ACTIVE: Lazy<Regex> =
             Lazy::new(|| Regex::new(r#"VPN Service:\s+(\w+)\s+"#).unwrap());
-
         static RE_EXPIRES: Lazy<Regex> = Lazy::new(|| {
             Regex::new(r#"\(Expires on\s+(\w{3})\s+(\d+)(?:st|nd|rd|th),\s+(\d{4})\)"#).unwrap()
         });
@@ -69,41 +67,30 @@ impl NordVPN {
             return Err(CliError::FailedCommand(command));
         }
 
-        let account = {
-            let email: String;
-            let active: bool;
-            let expires: NaiveDate;
-
-            if let Some(captures) = RE_EMAIL.captures(&stdout) {
-                email = captures.get(1).unwrap().as_str().to_owned();
+        let account = Account {
+            email: if let Some(captures) = RE_EMAIL.captures(&stdout) {
+                captures.get(1).unwrap().as_str().to_owned()
             } else {
-                return Err(CliError::BadOutput(command));
-            }
-
-            if let Some(captures) = RE_ACTIVE.captures(&stdout) {
-                active = captures.get(1).unwrap().as_str() == "Active";
+                return Err(CliError::FailedCommand(command));
+            },
+            active: if let Some(captures) = RE_ACTIVE.captures(&stdout) {
+                captures.get(1).unwrap().as_str() == "Active"
             } else {
-                return Err(CliError::BadOutput(command));
-            }
-
-            if let Some(captures) = RE_EXPIRES.captures(&stdout) {
-                let date = format!(
-                    "{}-{:02}-{}",
-                    captures.get(1).unwrap().as_str(),
-                    captures.get(2).unwrap().as_str(),
-                    captures.get(3).unwrap().as_str()
-                );
-
-                expires = NaiveDate::parse_from_str(&date, "%b-%d-%Y")?;
+                return Err(CliError::FailedCommand(command));
+            },
+            expires: if let Some(captures) = RE_EXPIRES.captures(&stdout) {
+                NaiveDate::parse_from_str(
+                    &format!(
+                        "{}-{:02}-{}",
+                        captures.get(1).unwrap().as_str(),
+                        captures.get(2).unwrap().as_str(),
+                        captures.get(3).unwrap().as_str()
+                    ),
+                    "%b-%d-%Y",
+                )?
             } else {
-                return Err(CliError::BadOutput(command));
-            }
-
-            Account {
-                email,
-                active,
-                expires,
-            }
+                return Err(CliError::FailedCommand(command));
+            },
         };
 
         Ok(Some(account))
