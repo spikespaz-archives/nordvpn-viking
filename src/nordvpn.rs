@@ -1,8 +1,11 @@
-use chrono::NaiveDate;
+use byte_unit::Byte;
+use chrono::{Duration, NaiveDate};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use semver::Version;
+use std::net::IpAddr;
 use std::process::{Command, Output};
+use strum;
 use thiserror::Error;
 
 type CliResult<T> = Result<T, CliError>;
@@ -45,6 +48,40 @@ pub struct Connected {
     pub country: String,
     pub server: u32,
     pub hostname: String,
+}
+
+#[derive(Debug)]
+pub struct Status {
+    pub hostname: String,
+    pub country: String,
+    pub city: String,
+    pub ip: IpAddr,
+    pub technology: Technology,
+    pub protocol: Protocol,
+    pub transfer: Transfer,
+    pub uptime: Duration,
+}
+
+#[derive(Debug, strum::EnumString)]
+#[strum(ascii_case_insensitive)]
+#[strum(serialize_all = "UPPERCASE")]
+pub enum Technology {
+    OpenVpn,
+    NordLynx,
+}
+
+#[derive(Debug, strum::EnumString)]
+#[strum(ascii_case_insensitive)]
+#[strum(serialize_all = "UPPERCASE")]
+pub enum Protocol {
+    Tcp,
+    Udp,
+}
+
+#[derive(Debug)]
+pub struct Transfer {
+    pub recieved: Byte,
+    pub sent: Byte,
 }
 
 pub struct NordVPN;
@@ -242,8 +279,125 @@ impl NordVPN {
         todo!();
     }
 
-    pub fn status() -> CliResult<()> {
-        todo!();
+    pub fn status() -> CliResult<Option<Status>> {
+        static RE_HOSTNAME: Lazy<Regex> =
+            Lazy::new(|| Regex::new(r#"Current server:\s+([\w\d\.]+)"#).unwrap());
+        static RE_COUNTRY: Lazy<Regex> =
+            Lazy::new(|| Regex::new(r#"Country:\s+([\w ]+)"#).unwrap());
+        static RE_CITY: Lazy<Regex> = Lazy::new(|| Regex::new(r#"City:\s+([\w ]+)"#).unwrap());
+        static RE_IP: Lazy<Regex> = Lazy::new(|| {
+            Regex::new(
+                r#"Server IP:\s+((?:[\da-fA-F]{0,4}:){1,7}[\da-fA-F]{0,4}|(?:\d{1,3}\.){3}\d{1,3})"#,
+            )
+            .unwrap()
+        });
+        static RE_TECHNOLOGY: Lazy<Regex> =
+            Lazy::new(|| Regex::new(r#"Current technology:\s+((?i:OPENVPN|NORDLYNX))"#).unwrap());
+        static RE_PROTOCOL: Lazy<Regex> =
+            Lazy::new(|| Regex::new(r#"Current technology:\s+((?i:TCP|UDP))"#).unwrap());
+        static RE_TRANSFER: Lazy<Regex> = Lazy::new(|| {
+            Regex::new(
+                r#"Transfer:\s+([\d.]+\s+[a-zA-Z]+)\s+received,\s+([\d.]+\s+[a-zA-Z]+)\s+sent"#,
+            )
+            .unwrap()
+        });
+        static RE_UPTIME: Lazy<Regex> = Lazy::new(|| {
+            Regex::new(r#"Uptime:\s+(?:(?P<years>\d+)\s+years?\s*)?(?:(?P<months>\d+)\s+months?\s*)?(?:(?P<days>\d+)\s+days?\s*)?(?:(?P<hours>\d+)\s+hours?\s*)?(?:(?P<minutes>\d+)\s+minutes?\s*)?(?:(?P<seconds>\d+)\s+seconds?\s*)?"#).unwrap()
+        });
+
+        let (command, output, stdout) = Self::command(["nordvpn", "status"])?;
+
+        if stdout.contains("Disconnected") {
+            return Ok(None);
+        } else if !output.status.success() {
+            return Err(CliError::FailedCommand(command));
+        }
+
+        let status = Status {
+            hostname: if let Some(captures) = RE_HOSTNAME.captures(&stdout) {
+                captures.get(1).unwrap().as_str().to_owned()
+            } else {
+                return Err(CliError::BadOutput(command));
+            },
+            country: if let Some(captures) = RE_COUNTRY.captures(&stdout) {
+                captures.get(1).unwrap().as_str().to_owned()
+            } else {
+                return Err(CliError::BadOutput(command));
+            },
+            city: if let Some(captures) = RE_CITY.captures(&stdout) {
+                captures.get(1).unwrap().as_str().to_owned()
+            } else {
+                return Err(CliError::BadOutput(command));
+            },
+            ip: if let Some(captures) = RE_IP.captures(&stdout) {
+                captures.get(1).unwrap().as_str().parse::<IpAddr>().unwrap()
+            } else {
+                return Err(CliError::BadOutput(command));
+            },
+            technology: if let Some(captures) = RE_TECHNOLOGY.captures(&stdout) {
+                captures
+                    .get(1)
+                    .unwrap()
+                    .as_str()
+                    .parse::<Technology>()
+                    .unwrap()
+            } else {
+                return Err(CliError::BadOutput(command));
+            },
+            protocol: if let Some(captures) = RE_PROTOCOL.captures(&stdout) {
+                captures
+                    .get(1)
+                    .unwrap()
+                    .as_str()
+                    .parse::<Protocol>()
+                    .unwrap()
+            } else {
+                return Err(CliError::BadOutput(command));
+            },
+            transfer: if let Some(captures) = RE_TRANSFER.captures(&stdout) {
+                Transfer {
+                    recieved: Byte::from_str(captures.get(1).unwrap().as_str()).unwrap(),
+                    sent: Byte::from_str(captures.get(2).unwrap().as_str()).unwrap(),
+                }
+            } else {
+                return Err(CliError::BadOutput(command));
+            },
+            uptime: if let Some(captures) = RE_UPTIME.captures(&stdout) {
+                let years = captures
+                    .name("years")
+                    .map_or(0_f64, |value| value.as_str().parse::<f64>().unwrap());
+                let months = captures
+                    .name("months")
+                    .map_or(0_f64, |value| value.as_str().parse::<f64>().unwrap());
+                let days = captures
+                    .name("days")
+                    .map_or(0_f64, |value| value.as_str().parse::<f64>().unwrap());
+                let hours = captures
+                    .name("hours")
+                    .map_or(0_f64, |value| value.as_str().parse::<f64>().unwrap());
+                let minutes = captures
+                    .name("minutes")
+                    .map_or(0_f64, |value| value.as_str().parse::<f64>().unwrap());
+                let seconds = captures
+                    .name("seconds")
+                    .map_or(0_f64, |value| value.as_str().parse::<f64>().unwrap());
+
+                Duration::milliseconds(
+                    (100_f64
+                        * (seconds
+                            + minutes * 60_f64
+                            + hours * 3600_f64
+                            + days * 86400_f64
+                            + months * (2.628_f64 * 10_f64.powi(6))
+                            + years * (3.154_f64 * 10_f64.powi(7))))
+                    .round() as i64,
+                )
+            } else {
+                return Err(CliError::BadOutput(command));
+            },
+        };
+
+        Ok(Some(status))
     }
 
     pub fn whitelist() -> CliResult<()> {
@@ -315,6 +469,21 @@ mod tests {
         for country in countries {
             let cities = NordVPN::cities(&country).unwrap();
             println!("Cities in {}: {:?}", country, cities);
+        }
+
+        let status = NordVPN::status();
+
+        match status {
+            Ok(status) => println!("{:#?}", status.unwrap()),
+            Err(error) => match error {
+                CliError::BadOutput(mut command) => {
+                    println!(
+                        "{}",
+                        String::from_utf8(command.output().unwrap().stdout).unwrap()
+                    );
+                }
+                _ => panic!(),
+            },
         }
     }
 }
