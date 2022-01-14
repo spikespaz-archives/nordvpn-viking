@@ -1,6 +1,7 @@
 use chrono::NaiveDate;
 use once_cell::sync::Lazy;
 use regex::Regex;
+use semver::Version;
 use std::process::Command;
 use thiserror::Error;
 
@@ -18,6 +19,8 @@ pub enum CliError {
     NoMatch(Command),
     #[error("failed to parse string as `NaiveDate`")]
     BadDateFormat(#[from] chrono::ParseError),
+    #[error("failed to parse semantic version")]
+    BadVersion(#[from] semver::Error),
 }
 
 #[derive(Debug)]
@@ -221,7 +224,7 @@ impl NordVPN {
         todo!();
     }
 
-    pub fn version() -> CliResult<String> {
+    pub fn version() -> CliResult<Version> {
         static RE: Lazy<Regex> = Lazy::new(|| Regex::new(r#"(\d+\.\d+.\d+)\s+$"#).unwrap());
 
         let mut command = Command::new("nordvpn");
@@ -238,7 +241,7 @@ impl NordVPN {
             None => return Err(CliError::NoMatch(command)),
         };
 
-        Ok(capture)
+        Ok(Version::parse(&capture)?)
     }
 
     fn parse_list(output: &str) -> Vec<String> {
@@ -255,16 +258,11 @@ impl NordVPN {
 #[cfg(test)]
 mod tests {
     use crate::nordvpn::*;
+    use semver::Version;
 
     #[test]
-    fn test_nordvpn_account() {
-        let result = NordVPN::account().unwrap();
-        println!("{:#?}", result);
+    fn test_nordvpn() {
+        let version = NordVPN::version().unwrap();
+        assert!(version >= Version::new(3, 12, 0));
     }
-
-    // #[test]
-    // fn test_nordvpn_version() {
-    //     let result = NordVPN::version().unwrap();
-    //     println!("{}", result);
-    // }
 }
