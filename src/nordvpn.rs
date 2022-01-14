@@ -16,7 +16,7 @@ pub enum CliError {
     #[error("failed to get command output as UTF-8")]
     BadEncoding(#[from] std::str::Utf8Error),
     #[error("command output did not match as expected")]
-    NoMatch(Command),
+    BadOutput(Command),
     #[error("failed to parse string as `NaiveDate`")]
     BadDateFormat(#[from] chrono::ParseError),
     #[error("failed to parse semantic version")]
@@ -79,13 +79,13 @@ impl NordVPN {
             if let Some(captures) = RE_EMAIL.captures(stdout) {
                 email = captures.get(1).unwrap().as_str().to_owned();
             } else {
-                return Err(CliError::NoMatch(command));
+                return Err(CliError::BadOutput(command));
             }
 
             if let Some(captures) = RE_ACTIVE.captures(stdout) {
                 active = captures.get(1).unwrap().as_str() == "Active";
             } else {
-                return Err(CliError::NoMatch(command));
+                return Err(CliError::BadOutput(command));
             }
 
             if let Some(captures) = RE_EXPIRES.captures(stdout) {
@@ -98,7 +98,7 @@ impl NordVPN {
 
                 expires = NaiveDate::parse_from_str(&date, "%b-%d-%Y")?;
             } else {
-                return Err(CliError::NoMatch(command));
+                return Err(CliError::BadOutput(command));
             }
 
             Account {
@@ -122,7 +122,7 @@ impl NordVPN {
 
         let cities = match Self::parse_list(stdout) {
             Some(cities) => cities,
-            None => return Err(CliError::NoMatch(command)),
+            None => return Err(CliError::BadOutput(command)),
         };
 
         Ok(cities)
@@ -159,7 +159,7 @@ impl NordVPN {
                 server: captures.get(2).unwrap().as_str().parse().unwrap(),
                 hostname: captures.get(3).unwrap().as_str().to_owned(),
             },
-            None => return Err(CliError::NoMatch(command)),
+            None => return Err(CliError::BadOutput(command)),
         };
 
         Ok(connected)
@@ -176,14 +176,28 @@ impl NordVPN {
 
         let countries = match Self::parse_list(stdout) {
             Some(countries) => countries,
-            None => return Err(CliError::NoMatch(command)),
+            None => return Err(CliError::BadOutput(command)),
         };
 
         Ok(countries)
     }
 
-    pub fn disconnect() -> CliResult<()> {
-        todo!();
+    pub fn disconnect() -> CliResult<bool> {
+        let mut command = Command::new("nordvpn");
+        let output = command.arg("disconnect").output()?;
+        let stdout = std::str::from_utf8(&output.stdout)?;
+
+        if !output.status.success() {
+            return Err(CliError::FailedCommand(command));
+        }
+
+        if stdout.contains("You are not connected to NordVPN.") {
+            return Ok(false);
+        } else if stdout.contains("You are disconnected from NordVPN.") {
+            return Ok(true);
+        }
+
+        Err(CliError::BadOutput(command))
     }
 
     pub fn groups() -> CliResult<Vec<String>> {
@@ -197,18 +211,48 @@ impl NordVPN {
 
         let groups = match Self::parse_list(stdout) {
             Some(groups) => groups,
-            None => return Err(CliError::NoMatch(command)),
+            None => return Err(CliError::BadOutput(command)),
         };
 
         Ok(groups)
     }
 
-    pub fn login() -> CliResult<()> {
-        todo!();
+    pub fn login() -> CliResult<Option<String>> {
+        static RE: Lazy<Regex> =
+            Lazy::new(|| Regex::new(r#"Continue in the browser:\s+(.+)\s*$"#).unwrap());
+
+        let mut command = Command::new("nordvpn");
+        let output = command.arg("login").output()?;
+        let stdout = std::str::from_utf8(&output.stdout)?;
+
+        if stdout.contains("You are already logged in.") {
+            return Ok(None);
+        } else if !output.status.success() {
+            return Err(CliError::FailedCommand(command));
+        }
+
+        let capture = match RE.captures(stdout) {
+            Some(captures) => captures.get(1).unwrap().as_str().to_owned(),
+            None => return Err(CliError::BadOutput(command)),
+        };
+
+        Ok(Some(capture))
     }
 
-    pub fn logout() -> CliResult<()> {
-        todo!();
+    pub fn logout() -> CliResult<bool> {
+        let mut command = Command::new("nordvpn");
+        let output = command.arg("login").output()?;
+        let stdout = std::str::from_utf8(&output.stdout)?;
+
+        if stdout.contains("You are not logged in.") {
+            return Ok(false);
+        } else if stdout.contains("You are logged out.") {
+            return Ok(true);
+        } else if !output.status.success() {
+            return Err(CliError::FailedCommand(command));
+        }
+
+        Err(CliError::BadOutput(command))
     }
 
     pub fn rate() -> CliResult<()> {
@@ -246,7 +290,7 @@ impl NordVPN {
 
         let capture = match RE.captures(stdout) {
             Some(captures) => captures.get(1).unwrap().as_str().to_owned(),
-            None => return Err(CliError::NoMatch(command)),
+            None => return Err(CliError::BadOutput(command)),
         };
 
         Ok(Version::parse(&capture)?)
