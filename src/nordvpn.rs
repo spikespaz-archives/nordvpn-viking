@@ -134,7 +134,7 @@ impl NordVPN {
                         "{}-{:02}-{}",
                         captures.name("expires_month")?.as_str(),
                         captures.name("expires_day")?.as_str(),
-                        captures.name("year")?.as_str(),
+                        captures.name("expires_year")?.as_str(),
                     ))
                 })()
                 .ok_or(CliError::RegexError(RegexError::AccountExpires, command))?,
