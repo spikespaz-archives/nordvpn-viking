@@ -1,7 +1,5 @@
 use byte_unit::Byte;
 use chrono::{Duration, NaiveDate};
-use once_cell::sync::Lazy;
-use regex::Regex;
 use semver::Version;
 use std::net::IpAddr;
 use std::process::{Command, Output};
@@ -104,6 +102,7 @@ mod cli_re {
         });
         pub const CONNECT: Lazy<Regex> =
             Lazy::new(|| Regex::new(connect::COUNTRY_SERVER_HOSTNAME).unwrap());
+        pub const LOGIN: Lazy<Regex> = Lazy::new(|| Regex::new(login::URL).unwrap());
         pub const STATUS: Lazy<Regex> = Lazy::new(|| {
             Regex::new(&format!(
                 r#"(?:{}|{}|{}|{}|{}|{}|{}|{})+"#,
@@ -132,7 +131,7 @@ mod cli_re {
     }
 
     pub mod login {
-        pub const URL: &str = r#"Continue in the browser:\s+(.+)\s*(?:\n|$)"#;
+        pub const URL: &str = r#"Continue in the browser:\s+(?P<url>.+)\s*(?:\n|$)"#;
     }
 
     pub mod status {
@@ -148,7 +147,7 @@ mod cli_re {
     }
 
     pub mod version {
-        pub const VERSION: &str = r#"(\d+\.\d+.\d+)\s*(?:\n|$)"#;
+        pub const VERSION: &str = r#"(?P<version>\d+\.\d+.\d+)\s*(?:\n|$)"#;
     }
 
     pub mod generic {
