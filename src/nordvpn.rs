@@ -161,9 +161,10 @@ impl NordVPN {
         Ok(cities)
     }
 
-    pub fn connect(option: &ConnectOption) -> CliResult<Connected> {
+    pub fn connect(option: Option<&ConnectOption>) -> CliResult<Connected> {
         let mut run = vec!["nordvpn", "connect"];
 
+        if let Some(option) = option {
         match option {
             ConnectOption::Country(country) => run.push(country),
             ConnectOption::Server(server) => run.push(server),
@@ -175,6 +176,7 @@ impl NordVPN {
                 run.push(city);
             }
         };
+        }
 
         let (command, output, stdout) = Self::command(run)?;
 
