@@ -88,44 +88,75 @@ mod cli_re {
     use once_cell::sync::Lazy;
     use regex::Regex;
 
-    pub const WORD_LIST: &str = r#"(\w+)(?:,\s*|\s*$)"#;
+    pub mod re {
+        use super::*;
+
+        pub const WORD_LIST: Lazy<Regex> = Lazy::new(|| Regex::new(generic::WORD_LIST).unwrap());
+
+        pub const ACCOUNT: Lazy<Regex> = Lazy::new(|| {
+            Regex::new(&format!(
+                r#"(?:{}|{}|{})+"#,
+                account::EMAIL,
+                account::ACTIVE,
+                account::EXPIRES
+            ))
+            .unwrap()
+        });
+        pub const CONNECT: Lazy<Regex> =
+            Lazy::new(|| Regex::new(connect::COUNTRY_SERVER_HOSTNAME).unwrap());
+        pub const STATUS: Lazy<Regex> = Lazy::new(|| {
+            Regex::new(&format!(
+                r#"(?:{}|{}|{}|{}|{}|{}|{}|{})+"#,
+                status::HOSTNAME,
+                status::COUNTRY,
+                status::CITY,
+                status::IP,
+                status::TECHNOLOGY,
+                status::PROTOCOL,
+                status::TRANSFER,
+                status::UPTIME
+            ))
+            .unwrap()
+        });
+        pub const VERSION: Lazy<Regex> = Lazy::new(|| Regex::new(version::VERSION).unwrap());
+    }
 
     pub mod account {
-        pub const EMAIL: &str = r#"Email Address:\s+(.+)\s+"#;
-        pub const ACTIVE: &str = r#"VPN Service:\s+(\w+)\s+"#;
-        pub const EXPIRES: &str = r#"\(Expires on\s+(\w{3})\s+(\d+)(?:st|nd|rd|th),\s+(\d{4})\)"#;
+        pub const EMAIL: &str = r#"Email Address:\s+(?P<email>.+)\s*(?:\n|$)"#;
+        pub const ACTIVE: &str = r#"VPN Service:\s+(?P<active>(?i)[a-z]+)\s*"#;
+        pub const EXPIRES: &str = r#"\(Expires on\s+(?P<expires_month>(?i)[a-z]{3})\s+(?P<expires_day>\d+)(?i:st|nd|rd|th),\s+(?P<expires_year>\d{4})\)"#;
     }
 
     pub mod connect {
-        pub const SERVER_COUNTRY_HOSTNAME: &str =
-            r#"You are connected to\s+([\w ]+)\s+#(\d+)\s+\(([\w\d\.]+)\)!"#;
+        pub const COUNTRY_SERVER_HOSTNAME: &str = r#"You are connected to\s+(?P<country>(?i)[a-z_ ]+)\s+#(?P<server>\d+)\s+\((?P<hostname>[\w\d\-\.]+)\)!"#;
     }
 
     pub mod login {
-        pub const URL: &str = r#"Continue in the browser:\s+(.+)\s*$"#;
+        pub const URL: &str = r#"Continue in the browser:\s+(.+)\s*(?:\n|$)"#;
     }
 
     pub mod status {
-        pub const HOSTNAME: &str = r#"Current server:\s+([\w\d\.]+)"#;
-        pub const COUNTRY: &str = r#"Country:\s+([\w ]+)"#;
-        pub const CITY: &str = r#"City:\s+([\w ]+)"#;
-        pub const IP: &str =
-            r#"Server IP:\s+((?:[\da-fA-F]{0,4}:){1,7}[\da-fA-F]{0,4}|(?:\d{1,3}\.){3}\d{1,3})"#;
-        pub const TECHNOLOGY: &str = r#"Current technology:\s+((?i:OPENVPN|NORDLYNX))"#;
-        pub const PROTOCOL: &str = r#"Current technology:\s+((?i:TCP|UDP))"#;
-        pub const TRANSFER: &str =
-            r#"Transfer:\s+([\d.]+\s+[a-zA-Z]+)\s+received,\s+([\d.]+\s+[a-zA-Z]+)\s+sent"#;
-        pub const UPTIME: &str = r#"Uptime:\s+(?:(?P<years>\d+)\s+years?\s*)?(?:(?P<months>\d+)\s+months?\s*)?(?:(?P<days>\d+)\s+days?\s*)?(?:(?P<hours>\d+)\s+hours?\s*)?(?:(?P<minutes>\d+)\s+minutes?\s*)?(?:(?P<seconds>\d+)\s+seconds?\s*)?"#;
+        pub const HOSTNAME: &str = r#"Current server:\s+(?P<hostname>[\w\d\-\.]+)\s*(?:\n|$)"#;
+        pub const COUNTRY: &str = r#"Country:\s+(?P<country>(?i)[a-z_ ]+[a-z_ ])\s*(?:\n|$)"#;
+        pub const CITY: &str = r#"City:\s+(?P<city>(?i)[a-z_ ]+[a-z_ ])\s*(?:\n|$)"#;
+        pub const IP: &str = r#"Server IP:\s+(?P<ip>(?i)(?:[\da-f]{0,4}:){1,7}[\da-f]{0,4}|(?:\d{1,3}\.){3}\d{1,3})\s*(?:\n|$)"#;
+        pub const TECHNOLOGY: &str =
+            r#"Current technology:\s+(?P<technology>(?i)OPENVPN|NORDLYNX)\s*(?:\n|$)"#;
+        pub const PROTOCOL: &str = r#"Current protocol:\s+(?P<protocol>(?i)TCP|UDP)\s*(?:\n|$)"#;
+        pub const TRANSFER: &str = r#"Transfer:\s+(?i:(?P<transfer_received>(?:\d+\.)?\d+\s+[a-z]+)\s+received,\s+(?P<transfer_sent>(?:\d+\.)?\d+\s+[a-z]+)\s+sent)\s*(?:\n|$)"#;
+        pub const UPTIME: &str = r#"Uptime:\s+(?i:(?:(?P<uptime_years>\d+)\s+years?\s*)?(?:(?P<uptime_months>\d+)\s+months?\s*)?(?:(?P<uptime_days>\d+)\s+days?\s*)?(?:(?P<uptime_hours>\d+)\s+hours?\s*)?(?:(?P<uptime_minutes>\d+)\s+minutes?\s*)?(?:(?P<uptime_seconds>\d+)\s+seconds?\s*)?)\s*(?:\n|$)"#;
     }
 
     pub mod version {
-        pub const VERSION: &str = r#"(\d+\.\d+.\d+)\s+$"#;
+        pub const VERSION: &str = r#"(\d+\.\d+.\d+)\s*(?:\n|$)"#;
+    }
+
+    pub mod generic {
+        pub const WORD_LIST: &str = r#"(\w+)(?:,\s*|\s*$)"#;
     }
 
     pub fn parse_list(text: &str) -> Option<Vec<String>> {
-        static RE: Lazy<Regex> = Lazy::new(|| Regex::new(WORD_LIST).unwrap());
-
-        let mut captures = RE.captures_iter(text).map(|capture| capture).peekable();
+        let mut captures = re::WORD_LIST.captures_iter(text).peekable();
 
         captures.peek()?;
 
