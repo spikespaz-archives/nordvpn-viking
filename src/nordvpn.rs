@@ -169,11 +169,6 @@ pub struct NordVPN;
 
 impl NordVPN {
     pub fn account() -> CliResult<Option<Account>> {
-        static RE_EMAIL: Lazy<Regex> = Lazy::new(|| Regex::new(cli_re::account::EMAIL).unwrap());
-        static RE_ACTIVE: Lazy<Regex> = Lazy::new(|| Regex::new(cli_re::account::ACTIVE).unwrap());
-        static RE_EXPIRES: Lazy<Regex> =
-            Lazy::new(|| Regex::new(cli_re::account::EXPIRES).unwrap());
-
         let (command, output, stdout) = Self::command(["nordvpn", "account"])?;
 
         if stdout.contains("You are not logged in.") {
@@ -182,30 +177,38 @@ impl NordVPN {
             return Err(CliError::FailedCommand(command));
         }
 
+        let captures = match cli_re::re::ACCOUNT.captures(&stdout) {
+            Some(captures) => captures,
+            None => return Err(CliError::BadOutput(command)),
+        };
+
         let account = Account {
-            email: if let Some(captures) = RE_EMAIL.captures(&stdout) {
-                captures.get(1).unwrap().as_str().to_owned()
-            } else {
-                return Err(CliError::BadOutput(command));
+            email: match captures.name("email") {
+                Some(email) => email.as_str().to_owned(),
+                None => return Err(CliError::BadOutput(command)),
             },
-            active: if let Some(captures) = RE_ACTIVE.captures(&stdout) {
-                captures.get(1).unwrap().as_str() == "Active"
-            } else {
-                return Err(CliError::BadOutput(command));
+            active: match captures.name("active") {
+                Some(active) => active.as_str().to_lowercase() == "active",
+                None => return Err(CliError::BadOutput(command)),
             },
-            expires: if let Some(captures) = RE_EXPIRES.captures(&stdout) {
-                NaiveDate::parse_from_str(
-                    &format!(
-                        "{}-{:02}-{}",
-                        captures.get(1).unwrap().as_str(),
-                        captures.get(2).unwrap().as_str(),
-                        captures.get(3).unwrap().as_str()
-                    ),
-                    "%b-%d-%Y",
-                )?
-            } else {
-                return Err(CliError::BadOutput(command));
-            },
+            expires: NaiveDate::parse_from_str(
+                &format!(
+                    "{}-{:02}-{}",
+                    match captures.name("expires_month") {
+                        Some(month) => month.as_str(),
+                        None => return Err(CliError::BadOutput(command)),
+                    },
+                    match captures.name("expires_day") {
+                        Some(day) => day.as_str(),
+                        None => return Err(CliError::BadOutput(command)),
+                    },
+                    match captures.name("expires_year") {
+                        Some(year) => year.as_str(),
+                        None => return Err(CliError::BadOutput(command)),
+                    }
+                ),
+                "%b-%d-%Y",
+            )?,
         };
 
         Ok(Some(account))
@@ -227,9 +230,6 @@ impl NordVPN {
     }
 
     pub fn connect(option: &ConnectOption) -> CliResult<Connected> {
-        static RE: Lazy<Regex> =
-            Lazy::new(|| Regex::new(cli_re::connect::SERVER_COUNTRY_HOSTNAME).unwrap());
-
         let mut run = vec!["nordvpn", "connect"];
 
         match option {
@@ -250,13 +250,24 @@ impl NordVPN {
             return Err(CliError::FailedCommand(command));
         }
 
-        let connected = match RE.captures(&stdout) {
-            Some(captures) => Connected {
-                country: captures.get(1).unwrap().as_str().to_owned(),
-                server: captures.get(2).unwrap().as_str().parse().unwrap(),
-                hostname: captures.get(3).unwrap().as_str().to_owned(),
-            },
+        let captures = match cli_re::re::CONNECT.captures(&stdout) {
+            Some(captures) => captures,
             None => return Err(CliError::BadOutput(command)),
+        };
+
+        let connected = Connected {
+            country: match captures.name("country") {
+                Some(country) => country.as_str().to_owned(),
+                None => return Err(CliError::BadOutput(command)),
+            },
+            server: match captures.name("server") {
+                Some(server) => server.as_str().parse::<u32>().unwrap(),
+                None => return Err(CliError::BadOutput(command)),
+            },
+            hostname: match captures.name("hostname") {
+                Some(hostname) => hostname.as_str().to_owned(),
+                None => return Err(CliError::BadOutput(command)),
+            },
         };
 
         Ok(connected)
@@ -309,8 +320,6 @@ impl NordVPN {
     }
 
     pub fn login() -> CliResult<Option<String>> {
-        static RE: Lazy<Regex> = Lazy::new(|| Regex::new(cli_re::login::URL).unwrap());
-
         let (command, output, stdout) = Self::command(["nordvpn", "login"])?;
 
         if stdout.contains("You are already logged in.") {
@@ -319,12 +328,17 @@ impl NordVPN {
             return Err(CliError::FailedCommand(command));
         }
 
-        let capture = match RE.captures(&stdout) {
-            Some(captures) => captures.get(1).unwrap().as_str().to_owned(),
+        let captures = match cli_re::re::LOGIN.captures(&stdout) {
+            Some(captures) => captures,
             None => return Err(CliError::BadOutput(command)),
         };
 
-        Ok(Some(capture))
+        let url = match captures.name("url") {
+            Some(url) => url.as_str().to_owned(),
+            None => return Err(CliError::BadOutput(command)),
+        };
+
+        Ok(Some(url))
     }
 
     pub fn logout() -> CliResult<bool> {
@@ -356,19 +370,6 @@ impl NordVPN {
     }
 
     pub fn status() -> CliResult<Option<Status>> {
-        static RE_HOSTNAME: Lazy<Regex> =
-            Lazy::new(|| Regex::new(cli_re::status::HOSTNAME).unwrap());
-        static RE_COUNTRY: Lazy<Regex> = Lazy::new(|| Regex::new(cli_re::status::COUNTRY).unwrap());
-        static RE_CITY: Lazy<Regex> = Lazy::new(|| Regex::new(cli_re::status::CITY).unwrap());
-        static RE_IP: Lazy<Regex> = Lazy::new(|| Regex::new(cli_re::status::IP).unwrap());
-        static RE_TECHNOLOGY: Lazy<Regex> =
-            Lazy::new(|| Regex::new(cli_re::status::TECHNOLOGY).unwrap());
-        static RE_PROTOCOL: Lazy<Regex> =
-            Lazy::new(|| Regex::new(cli_re::status::PROTOCOL).unwrap());
-        static RE_TRANSFER: Lazy<Regex> =
-            Lazy::new(|| Regex::new(cli_re::status::TRANSFER).unwrap());
-        static RE_UPTIME: Lazy<Regex> = Lazy::new(|| Regex::new(cli_re::status::UPTIME).unwrap());
-
         let (command, output, stdout) = Self::command(["nordvpn", "status"])?;
 
         if stdout.contains("Disconnected") {
@@ -377,73 +378,64 @@ impl NordVPN {
             return Err(CliError::FailedCommand(command));
         }
 
+        let captures = match cli_re::re::STATUS.captures(&stdout) {
+            Some(captures) => captures,
+            None => return Err(CliError::BadOutput(command)),
+        };
+
         let status = Status {
-            hostname: if let Some(captures) = RE_HOSTNAME.captures(&stdout) {
-                captures.get(1).unwrap().as_str().to_owned()
-            } else {
-                return Err(CliError::BadOutput(command));
+            hostname: match captures.name("hostname") {
+                Some(hostname) => hostname.as_str().to_owned(),
+                None => return Err(CliError::BadOutput(command)),
             },
-            country: if let Some(captures) = RE_COUNTRY.captures(&stdout) {
-                captures.get(1).unwrap().as_str().to_owned()
-            } else {
-                return Err(CliError::BadOutput(command));
+            country: match captures.name("country") {
+                Some(country) => country.as_str().to_owned(),
+                None => return Err(CliError::BadOutput(command)),
             },
-            city: if let Some(captures) = RE_CITY.captures(&stdout) {
-                captures.get(1).unwrap().as_str().to_owned()
-            } else {
-                return Err(CliError::BadOutput(command));
+            city: match captures.name("city") {
+                Some(city) => city.as_str().to_owned(),
+                None => return Err(CliError::BadOutput(command)),
             },
-            ip: if let Some(captures) = RE_IP.captures(&stdout) {
-                captures.get(1).unwrap().as_str().parse::<IpAddr>().unwrap()
-            } else {
-                return Err(CliError::BadOutput(command));
+            ip: match captures.name("ip") {
+                Some(ip) => ip.as_str().parse::<IpAddr>().unwrap(),
+                None => return Err(CliError::BadOutput(command)),
             },
-            technology: if let Some(captures) = RE_TECHNOLOGY.captures(&stdout) {
-                captures
-                    .get(1)
-                    .unwrap()
-                    .as_str()
-                    .parse::<Technology>()
-                    .unwrap()
-            } else {
-                return Err(CliError::BadOutput(command));
+            technology: match captures.name("technology") {
+                Some(technology) => technology.as_str().parse::<Technology>().unwrap(),
+                None => return Err(CliError::BadOutput(command)),
             },
-            protocol: if let Some(captures) = RE_PROTOCOL.captures(&stdout) {
-                captures
-                    .get(1)
-                    .unwrap()
-                    .as_str()
-                    .parse::<Protocol>()
-                    .unwrap()
-            } else {
-                return Err(CliError::BadOutput(command));
+            protocol: match captures.name("protocol") {
+                Some(protocol) => protocol.as_str().parse::<Protocol>().unwrap(),
+                None => return Err(CliError::BadOutput(command)),
             },
-            transfer: if let Some(captures) = RE_TRANSFER.captures(&stdout) {
-                Transfer {
-                    recieved: Byte::from_str(captures.get(1).unwrap().as_str()).unwrap(),
-                    sent: Byte::from_str(captures.get(2).unwrap().as_str()).unwrap(),
-                }
-            } else {
-                return Err(CliError::BadOutput(command));
+            transfer: Transfer {
+                received: match captures.name("transfer_received") {
+                    Some(received) => received.as_str().parse::<Byte>().unwrap(),
+                    None => return Err(CliError::BadOutput(command)),
+                },
+                sent: match captures.name("transfer_sent") {
+                    Some(sent) => sent.as_str().parse::<Byte>().unwrap(),
+                    None => return Err(CliError::BadOutput(command)),
+                },
             },
-            uptime: if let Some(captures) = RE_UPTIME.captures(&stdout) {
+            uptime: {
                 let years = captures
-                    .name("years")
+                    .name("uptime_years")
                     .map_or(0_f64, |value| value.as_str().parse::<f64>().unwrap());
                 let months = captures
-                    .name("months")
+                    .name("uptime_months")
                     .map_or(0_f64, |value| value.as_str().parse::<f64>().unwrap());
                 let days = captures
-                    .name("days")
+                    .name("uptime_days")
                     .map_or(0_f64, |value| value.as_str().parse::<f64>().unwrap());
                 let hours = captures
-                    .name("hours")
+                    .name("uptime_hours")
                     .map_or(0_f64, |value| value.as_str().parse::<f64>().unwrap());
                 let minutes = captures
-                    .name("minutes")
+                    .name("uptime_minutes")
                     .map_or(0_f64, |value| value.as_str().parse::<f64>().unwrap());
                 let seconds = captures
-                    .name("seconds")
+                    .name("uptime_seconds")
                     .map_or(0_f64, |value| value.as_str().parse::<f64>().unwrap());
 
                 Duration::milliseconds(
@@ -456,8 +448,6 @@ impl NordVPN {
                             + years * (3.154_f64 * 10_f64.powi(7))))
                     .round() as i64,
                 )
-            } else {
-                return Err(CliError::BadOutput(command));
             },
         };
 
@@ -469,20 +459,23 @@ impl NordVPN {
     }
 
     pub fn version() -> CliResult<Version> {
-        static RE: Lazy<Regex> = Lazy::new(|| Regex::new(cli_re::version::VERSION).unwrap());
-
         let (command, output, stdout) = Self::command(["nordvpn", "version"])?;
 
         if !output.status.success() {
             return Err(CliError::FailedCommand(command));
         }
 
-        let capture = match RE.captures(&stdout) {
-            Some(captures) => captures.get(1).unwrap().as_str().to_owned(),
+        let captures = match cli_re::re::VERSION.captures(&stdout) {
+            Some(captures) => captures,
             None => return Err(CliError::BadOutput(command)),
         };
 
-        Ok(Version::parse(&capture)?)
+        let version = match captures.name("version") {
+            Some(version) => version.as_str().parse::<Version>()?,
+            None => return Err(CliError::BadOutput(command)),
+        };
+
+        Ok(version)
     }
 
     fn command<'a, I>(run: I) -> CliResult<(Command, Output, String)>
