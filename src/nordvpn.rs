@@ -84,17 +84,65 @@ pub struct Transfer {
     pub sent: Byte,
 }
 
+mod cli_re {
+    use once_cell::sync::Lazy;
+    use regex::Regex;
+
+    pub const WORD_LIST: &str = r#"(\w+)(?:,\s*|\s*$)"#;
+
+    pub mod account {
+        pub const EMAIL: &str = r#"Email Address:\s+(.+)\s+"#;
+        pub const ACTIVE: &str = r#"VPN Service:\s+(\w+)\s+"#;
+        pub const EXPIRES: &str = r#"\(Expires on\s+(\w{3})\s+(\d+)(?:st|nd|rd|th),\s+(\d{4})\)"#;
+    }
+
+    pub mod connect {
+        pub const SERVER_COUNTRY_HOSTNAME: &str =
+            r#"You are connected to\s+([\w ]+)\s+#(\d+)\s+\(([\w\d\.]+)\)!"#;
+    }
+
+    pub mod login {
+        pub const URL: &str = r#"Continue in the browser:\s+(.+)\s*$"#;
+    }
+
+    pub mod status {
+        pub const HOSTNAME: &str = r#"Current server:\s+([\w\d\.]+)"#;
+        pub const COUNTRY: &str = r#"Country:\s+([\w ]+)"#;
+        pub const CITY: &str = r#"City:\s+([\w ]+)"#;
+        pub const IP: &str =
+            r#"Server IP:\s+((?:[\da-fA-F]{0,4}:){1,7}[\da-fA-F]{0,4}|(?:\d{1,3}\.){3}\d{1,3})"#;
+        pub const TECHNOLOGY: &str = r#"Current technology:\s+((?i:OPENVPN|NORDLYNX))"#;
+        pub const PROTOCOL: &str = r#"Current technology:\s+((?i:TCP|UDP))"#;
+        pub const TRANSFER: &str =
+            r#"Transfer:\s+([\d.]+\s+[a-zA-Z]+)\s+received,\s+([\d.]+\s+[a-zA-Z]+)\s+sent"#;
+        pub const UPTIME: &str = r#"Uptime:\s+(?:(?P<years>\d+)\s+years?\s*)?(?:(?P<months>\d+)\s+months?\s*)?(?:(?P<days>\d+)\s+days?\s*)?(?:(?P<hours>\d+)\s+hours?\s*)?(?:(?P<minutes>\d+)\s+minutes?\s*)?(?:(?P<seconds>\d+)\s+seconds?\s*)?"#;
+    }
+
+    pub mod version {
+        pub const VERSION: &str = r#"(\d+\.\d+.\d+)\s+$"#;
+    }
+
+    pub fn parse_list(text: &str) -> Option<Vec<String>> {
+        static RE: Lazy<Regex> = Lazy::new(|| Regex::new(WORD_LIST).unwrap());
+
+        let mut captures = RE.captures_iter(text).map(|capture| capture).peekable();
+
+        captures.peek()?;
+
+        let items = captures.map(|capture| capture.get(1).unwrap().as_str().to_owned());
+
+        Some(items.collect())
+    }
+}
+
 pub struct NordVPN;
 
 impl NordVPN {
     pub fn account() -> CliResult<Option<Account>> {
-        static RE_EMAIL: Lazy<Regex> =
-            Lazy::new(|| Regex::new(r#"Email Address:\s+(.+)\s+"#).unwrap());
-        static RE_ACTIVE: Lazy<Regex> =
-            Lazy::new(|| Regex::new(r#"VPN Service:\s+(\w+)\s+"#).unwrap());
-        static RE_EXPIRES: Lazy<Regex> = Lazy::new(|| {
-            Regex::new(r#"\(Expires on\s+(\w{3})\s+(\d+)(?:st|nd|rd|th),\s+(\d{4})\)"#).unwrap()
-        });
+        static RE_EMAIL: Lazy<Regex> = Lazy::new(|| Regex::new(cli_re::account::EMAIL).unwrap());
+        static RE_ACTIVE: Lazy<Regex> = Lazy::new(|| Regex::new(cli_re::account::ACTIVE).unwrap());
+        static RE_EXPIRES: Lazy<Regex> =
+            Lazy::new(|| Regex::new(cli_re::account::EXPIRES).unwrap());
 
         let (command, output, stdout) = Self::command(["nordvpn", "account"])?;
 
@@ -140,7 +188,7 @@ impl NordVPN {
             return Err(CliError::FailedCommand(command));
         }
 
-        let cities = match Self::parse_list(&stdout) {
+        let cities = match cli_re::parse_list(&stdout) {
             Some(cities) => cities,
             None => return Err(CliError::BadOutput(command)),
         };
@@ -149,9 +197,8 @@ impl NordVPN {
     }
 
     pub fn connect(option: &ConnectOption) -> CliResult<Connected> {
-        static RE: Lazy<Regex> = Lazy::new(|| {
-            Regex::new(r#"You are connected to\s+([\w ]+)\s+#(\d+)\s+\(([\w\d\.]+)\)!"#).unwrap()
-        });
+        static RE: Lazy<Regex> =
+            Lazy::new(|| Regex::new(cli_re::connect::SERVER_COUNTRY_HOSTNAME).unwrap());
 
         let mut run = vec!["nordvpn", "connect"];
 
@@ -192,7 +239,7 @@ impl NordVPN {
             return Err(CliError::FailedCommand(command));
         }
 
-        let countries = match Self::parse_list(&stdout) {
+        let countries = match cli_re::parse_list(&stdout) {
             Some(countries) => countries,
             None => return Err(CliError::BadOutput(command)),
         };
@@ -223,7 +270,7 @@ impl NordVPN {
             return Err(CliError::FailedCommand(command));
         }
 
-        let groups = match Self::parse_list(&stdout) {
+        let groups = match cli_re::parse_list(&stdout) {
             Some(groups) => groups,
             None => return Err(CliError::BadOutput(command)),
         };
@@ -232,8 +279,7 @@ impl NordVPN {
     }
 
     pub fn login() -> CliResult<Option<String>> {
-        static RE: Lazy<Regex> =
-            Lazy::new(|| Regex::new(r#"Continue in the browser:\s+(.+)\s*$"#).unwrap());
+        static RE: Lazy<Regex> = Lazy::new(|| Regex::new(cli_re::login::URL).unwrap());
 
         let (command, output, stdout) = Self::command(["nordvpn", "login"])?;
 
@@ -281,29 +327,17 @@ impl NordVPN {
 
     pub fn status() -> CliResult<Option<Status>> {
         static RE_HOSTNAME: Lazy<Regex> =
-            Lazy::new(|| Regex::new(r#"Current server:\s+([\w\d\.]+)"#).unwrap());
-        static RE_COUNTRY: Lazy<Regex> =
-            Lazy::new(|| Regex::new(r#"Country:\s+([\w ]+)"#).unwrap());
-        static RE_CITY: Lazy<Regex> = Lazy::new(|| Regex::new(r#"City:\s+([\w ]+)"#).unwrap());
-        static RE_IP: Lazy<Regex> = Lazy::new(|| {
-            Regex::new(
-                r#"Server IP:\s+((?:[\da-fA-F]{0,4}:){1,7}[\da-fA-F]{0,4}|(?:\d{1,3}\.){3}\d{1,3})"#,
-            )
-            .unwrap()
-        });
+            Lazy::new(|| Regex::new(cli_re::status::HOSTNAME).unwrap());
+        static RE_COUNTRY: Lazy<Regex> = Lazy::new(|| Regex::new(cli_re::status::COUNTRY).unwrap());
+        static RE_CITY: Lazy<Regex> = Lazy::new(|| Regex::new(cli_re::status::CITY).unwrap());
+        static RE_IP: Lazy<Regex> = Lazy::new(|| Regex::new(cli_re::status::IP).unwrap());
         static RE_TECHNOLOGY: Lazy<Regex> =
-            Lazy::new(|| Regex::new(r#"Current technology:\s+((?i:OPENVPN|NORDLYNX))"#).unwrap());
+            Lazy::new(|| Regex::new(cli_re::status::TECHNOLOGY).unwrap());
         static RE_PROTOCOL: Lazy<Regex> =
-            Lazy::new(|| Regex::new(r#"Current technology:\s+((?i:TCP|UDP))"#).unwrap());
-        static RE_TRANSFER: Lazy<Regex> = Lazy::new(|| {
-            Regex::new(
-                r#"Transfer:\s+([\d.]+\s+[a-zA-Z]+)\s+received,\s+([\d.]+\s+[a-zA-Z]+)\s+sent"#,
-            )
-            .unwrap()
-        });
-        static RE_UPTIME: Lazy<Regex> = Lazy::new(|| {
-            Regex::new(r#"Uptime:\s+(?:(?P<years>\d+)\s+years?\s*)?(?:(?P<months>\d+)\s+months?\s*)?(?:(?P<days>\d+)\s+days?\s*)?(?:(?P<hours>\d+)\s+hours?\s*)?(?:(?P<minutes>\d+)\s+minutes?\s*)?(?:(?P<seconds>\d+)\s+seconds?\s*)?"#).unwrap()
-        });
+            Lazy::new(|| Regex::new(cli_re::status::PROTOCOL).unwrap());
+        static RE_TRANSFER: Lazy<Regex> =
+            Lazy::new(|| Regex::new(cli_re::status::TRANSFER).unwrap());
+        static RE_UPTIME: Lazy<Regex> = Lazy::new(|| Regex::new(cli_re::status::UPTIME).unwrap());
 
         let (command, output, stdout) = Self::command(["nordvpn", "status"])?;
 
@@ -405,7 +439,7 @@ impl NordVPN {
     }
 
     pub fn version() -> CliResult<Version> {
-        static RE: Lazy<Regex> = Lazy::new(|| Regex::new(r#"(\d+\.\d+.\d+)\s+$"#).unwrap());
+        static RE: Lazy<Regex> = Lazy::new(|| Regex::new(cli_re::version::VERSION).unwrap());
 
         let (command, output, stdout) = Self::command(["nordvpn", "version"])?;
 
@@ -434,18 +468,6 @@ impl NordVPN {
         let stdout = String::from_utf8(output.stdout.clone())?;
 
         Ok((command, output, stdout.clone()))
-    }
-
-    fn parse_list(text: &str) -> Option<Vec<String>> {
-        static RE: Lazy<Regex> = Lazy::new(|| Regex::new(r#"(\w+)(?:,\s*|\s*$)"#).unwrap());
-
-        let mut captures = RE.captures_iter(text).map(|capture| capture).peekable();
-
-        captures.peek()?;
-
-        let items = captures.map(|capture| capture.get(1).unwrap().as_str().to_owned());
-
-        Some(items.collect())
     }
 }
 
