@@ -2,6 +2,7 @@ mod cli;
 mod re;
 
 pub use cli::*;
+pub use re::RegexError;
 
 #[cfg(test)]
 mod tests {
