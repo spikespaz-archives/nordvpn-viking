@@ -18,10 +18,30 @@ pub enum CliError {
     BadEncoding(#[from] std::string::FromUtf8Error),
     #[error("command output did not match as expected")]
     BadOutput(Command),
-    #[error("failed to parse string as `NaiveDate`")]
-    BadDateFormat(#[from] chrono::ParseError),
-    #[error("failed to parse semantic version")]
-    BadVersion(#[from] semver::Error),
+    #[error("a regex pattern failed to match")]
+    RegexError(RegexError, Command),
+}
+
+#[derive(Debug)]
+pub enum RegexError {
+    Account,
+    AccountEmail,
+    AccountActive,
+    AccountExpires,
+    Cities,
+    Connect,
+    Countries,
+    Groups,
+    Login,
+    Status,
+    StatusHostname,
+    StatusCountry,
+    StatusCity,
+    StatusIp,
+    StatusTechnology,
+    StatusProtocol,
+    StatusTransfer,
+    Version,
 }
 
 #[derive(Debug)]
@@ -96,36 +116,31 @@ impl NordVPN {
 
         let captures = match cli_re::re::ACCOUNT.captures(&stdout) {
             Some(captures) => captures,
-            None => return Err(CliError::BadOutput(command)),
+            None => return Err(CliError::RegexError(RegexError::Account, command)),
         };
 
         let account = Account {
             email: match captures.name("email") {
                 Some(email) => email.as_str().to_owned(),
-                None => return Err(CliError::BadOutput(command)),
+                None => return Err(CliError::RegexError(RegexError::AccountEmail, command)),
             },
             active: match captures.name("active") {
                 Some(active) => active.as_str().to_lowercase() == "active",
-                None => return Err(CliError::BadOutput(command)),
+                None => return Err(CliError::RegexError(RegexError::AccountActive, command)),
             },
             expires: NaiveDate::parse_from_str(
-                &format!(
-                    "{}-{:02}-{}",
-                    match captures.name("expires_month") {
-                        Some(month) => month.as_str(),
-                        None => return Err(CliError::BadOutput(command)),
-                    },
-                    match captures.name("expires_day") {
-                        Some(day) => day.as_str(),
-                        None => return Err(CliError::BadOutput(command)),
-                    },
-                    match captures.name("expires_year") {
-                        Some(year) => year.as_str(),
-                        None => return Err(CliError::BadOutput(command)),
-                    }
-                ),
+                &(|| {
+                    Some(format!(
+                        "{}-{:02}-{}",
+                        captures.name("expires_month")?.as_str(),
+                        captures.name("expires_day")?.as_str(),
+                        captures.name("year")?.as_str(),
+                    ))
+                })()
+                .ok_or(CliError::RegexError(RegexError::AccountExpires, command))?,
                 "%b-%d-%Y",
-            )?,
+            )
+            .unwrap(),
         };
 
         Ok(Some(account))
@@ -140,7 +155,7 @@ impl NordVPN {
 
         let cities = match cli_re::parse_list(&stdout) {
             Some(cities) => cities,
-            None => return Err(CliError::BadOutput(command)),
+            None => return Err(CliError::RegexError(RegexError::Cities, command)),
         };
 
         Ok(cities)
@@ -169,23 +184,17 @@ impl NordVPN {
 
         let captures = match cli_re::re::CONNECT.captures(&stdout) {
             Some(captures) => captures,
-            None => return Err(CliError::BadOutput(command)),
+            None => return Err(CliError::RegexError(RegexError::Connect, command)),
         };
 
-        let connected = Connected {
-            country: match captures.name("country") {
-                Some(country) => country.as_str().to_owned(),
-                None => return Err(CliError::BadOutput(command)),
-            },
-            server: match captures.name("server") {
-                Some(server) => server.as_str().parse::<u32>().unwrap(),
-                None => return Err(CliError::BadOutput(command)),
-            },
-            hostname: match captures.name("hostname") {
-                Some(hostname) => hostname.as_str().to_owned(),
-                None => return Err(CliError::BadOutput(command)),
-            },
-        };
+        let connected = (|| {
+            Some(Connected {
+                country: captures.name("country")?.as_str().to_owned(),
+                server: captures.name("server")?.as_str().parse::<u32>().unwrap(),
+                hostname: captures.name("hostname")?.as_str().to_owned(),
+            })
+        })()
+        .ok_or(CliError::RegexError(RegexError::Connect, command))?;
 
         Ok(connected)
     }
@@ -199,7 +208,7 @@ impl NordVPN {
 
         let countries = match cli_re::parse_list(&stdout) {
             Some(countries) => countries,
-            None => return Err(CliError::BadOutput(command)),
+            None => return Err(CliError::RegexError(RegexError::Countries, command)),
         };
 
         Ok(countries)
@@ -230,7 +239,7 @@ impl NordVPN {
 
         let groups = match cli_re::parse_list(&stdout) {
             Some(groups) => groups,
-            None => return Err(CliError::BadOutput(command)),
+            None => return Err(CliError::RegexError(RegexError::Groups, command)),
         };
 
         Ok(groups)
@@ -247,13 +256,10 @@ impl NordVPN {
 
         let captures = match cli_re::re::LOGIN.captures(&stdout) {
             Some(captures) => captures,
-            None => return Err(CliError::BadOutput(command)),
+            None => return Err(CliError::RegexError(RegexError::Login, command)),
         };
 
-        let url = match captures.name("url") {
-            Some(url) => url.as_str().to_owned(),
-            None => return Err(CliError::BadOutput(command)),
-        };
+        let url = captures.name("url").unwrap().as_str().to_owned();
 
         Ok(Some(url))
     }
@@ -297,44 +303,49 @@ impl NordVPN {
 
         let captures = match cli_re::re::STATUS.captures(&stdout) {
             Some(captures) => captures,
-            None => return Err(CliError::BadOutput(command)),
+            None => return Err(CliError::RegexError(RegexError::Status, command)),
         };
 
         let status = Status {
             hostname: match captures.name("hostname") {
                 Some(hostname) => hostname.as_str().to_owned(),
-                None => return Err(CliError::BadOutput(command)),
+                None => return Err(CliError::RegexError(RegexError::StatusHostname, command)),
             },
             country: match captures.name("country") {
                 Some(country) => country.as_str().to_owned(),
-                None => return Err(CliError::BadOutput(command)),
+                None => return Err(CliError::RegexError(RegexError::StatusCountry, command)),
             },
             city: match captures.name("city") {
                 Some(city) => city.as_str().to_owned(),
-                None => return Err(CliError::BadOutput(command)),
+                None => return Err(CliError::RegexError(RegexError::StatusCity, command)),
             },
             ip: match captures.name("ip") {
                 Some(ip) => ip.as_str().parse::<IpAddr>().unwrap(),
-                None => return Err(CliError::BadOutput(command)),
+                None => return Err(CliError::RegexError(RegexError::StatusIp, command)),
             },
             technology: match captures.name("technology") {
                 Some(technology) => technology.as_str().parse::<Technology>().unwrap(),
-                None => return Err(CliError::BadOutput(command)),
+                None => return Err(CliError::RegexError(RegexError::StatusTechnology, command)),
             },
             protocol: match captures.name("protocol") {
                 Some(protocol) => protocol.as_str().parse::<Protocol>().unwrap(),
-                None => return Err(CliError::BadOutput(command)),
+                None => return Err(CliError::RegexError(RegexError::StatusProtocol, command)),
             },
-            transfer: Transfer {
-                received: match captures.name("transfer_received") {
-                    Some(received) => received.as_str().parse::<Byte>().unwrap(),
-                    None => return Err(CliError::BadOutput(command)),
-                },
-                sent: match captures.name("transfer_sent") {
-                    Some(sent) => sent.as_str().parse::<Byte>().unwrap(),
-                    None => return Err(CliError::BadOutput(command)),
-                },
-            },
+            transfer: (|| {
+                Some(Transfer {
+                    received: captures
+                        .name("transfer_received")?
+                        .as_str()
+                        .parse::<Byte>()
+                        .unwrap(),
+                    sent: captures
+                        .name("transfer_sent")?
+                        .as_str()
+                        .parse::<Byte>()
+                        .unwrap(),
+                })
+            })()
+            .ok_or(CliError::RegexError(RegexError::StatusTransfer, command))?,
             uptime: {
                 let years = captures
                     .name("uptime_years")
@@ -384,13 +395,15 @@ impl NordVPN {
 
         let captures = match cli_re::re::VERSION.captures(&stdout) {
             Some(captures) => captures,
-            None => return Err(CliError::BadOutput(command)),
+            None => return Err(CliError::RegexError(RegexError::Version, command)),
         };
 
-        let version = match captures.name("version") {
-            Some(version) => version.as_str().parse::<Version>()?,
-            None => return Err(CliError::BadOutput(command)),
-        };
+        let version = captures
+            .name("version")
+            .unwrap()
+            .as_str()
+            .parse::<Version>()
+            .unwrap();
 
         Ok(version)
     }
@@ -517,18 +530,6 @@ mod tests {
         }
 
         let status = NordVPN::status();
-
-        match status {
-            Ok(status) => println!("{:#?}", status.unwrap()),
-            Err(error) => match error {
-                CliError::BadOutput(mut command) => {
-                    println!(
-                        "{}",
-                        String::from_utf8(command.output().unwrap().stdout).unwrap()
-                    );
-                }
-                _ => panic!(),
-            },
-        }
+        println!("{:#?}", status);
     }
 }
