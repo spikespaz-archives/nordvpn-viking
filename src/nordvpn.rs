@@ -78,7 +78,7 @@ pub enum Protocol {
 
 #[derive(Debug)]
 pub struct Transfer {
-    pub recieved: Byte,
+    pub received: Byte,
     pub sent: Byte,
 }
 
