@@ -165,17 +165,17 @@ impl NordVPN {
         let mut run = vec!["nordvpn", "connect"];
 
         if let Some(option) = option {
-        match option {
-            ConnectOption::Country(country) => run.push(country),
-            ConnectOption::Server(server) => run.push(server),
-            ConnectOption::CountryCode(country_code) => run.push(country_code),
-            ConnectOption::City(city) => run.push(city),
-            ConnectOption::Group(group) => run.push(group),
-            ConnectOption::CountryCity(country, city) => {
-                run.push(country);
-                run.push(city);
-            }
-        };
+            match option {
+                ConnectOption::Country(country) => run.push(country),
+                ConnectOption::Server(server) => run.push(server),
+                ConnectOption::CountryCode(country_code) => run.push(country_code),
+                ConnectOption::City(city) => run.push(city),
+                ConnectOption::Group(group) => run.push(group),
+                ConnectOption::CountryCity(country, city) => {
+                    run.push(country);
+                    run.push(city);
+                }
+            };
         }
 
         let (command, output, stdout) = Self::command(run)?;
@@ -531,7 +531,22 @@ mod tests {
             println!("Cities in {}: {:?}", country, cities);
         }
 
-        let status = NordVPN::status();
-        println!("{:#?}", status);
+        let groups = NordVPN::groups().unwrap();
+        println!("Groups: {:?}", groups);
+
+        let status = NordVPN::status().unwrap();
+        println!("Status: {:#?}", status);
+
+        let connect = NordVPN::connect(None).unwrap();
+        println!("Connect response: {:#?}", connect);
+
+        let status = NordVPN::status().unwrap();
+        println!("Status: {:#?}", status);
+
+        let disconnect = NordVPN::disconnect().unwrap();
+        println!("Disconnected: {}", disconnect);
+
+        let status = NordVPN::status().unwrap();
+        println!("Status: {:#?}", status);
     }
 }
