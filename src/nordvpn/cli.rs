@@ -1,7 +1,6 @@
 use super::re::{self, RegexError};
 use byte_unit::Byte;
 use chrono::{Duration, NaiveDate};
-use getset::Getters;
 use semver::Version;
 use std::ffi::OsStr;
 use std::net::IpAddr;
@@ -29,21 +28,21 @@ pub enum CliError {
     InvalidSettingValue(String, Vec<String>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Account {
     pub email: String,
     pub active: bool,
     pub expires: NaiveDate,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Connected {
     pub country: String,
     pub server: u32,
     pub hostname: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ConnectOption {
     Country(String),
     Server(String),
@@ -53,7 +52,7 @@ pub enum ConnectOption {
     CountryCity(String, String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Status {
     pub hostname: String,
     pub country: String,
@@ -65,7 +64,7 @@ pub struct Status {
     pub uptime: Duration,
 }
 
-#[derive(Debug, strum::Display, strum::EnumString)]
+#[derive(Debug, Copy, Clone, strum::Display, strum::EnumString)]
 #[strum(ascii_case_insensitive)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum Technology {
@@ -73,7 +72,7 @@ pub enum Technology {
     NordLynx,
 }
 
-#[derive(Debug, strum::Display, strum::EnumString)]
+#[derive(Debug, Copy, Clone, strum::Display, strum::EnumString)]
 #[strum(ascii_case_insensitive)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum Protocol {
@@ -81,7 +80,7 @@ pub enum Protocol {
     Udp,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Transfer {
     pub received: Byte,
     pub sent: Byte,
@@ -421,23 +420,37 @@ pub fn version() -> CliResult<Version> {
     Ok(version)
 }
 
-#[derive(Debug, Getters)]
-#[getset(get = "pub")]
+#[derive(Debug, Clone)]
 pub struct Settings {
-    technology: Technology,
-    protocol: Protocol,
-    firewall: bool,
-    killswitch: bool,
-    cybersec: bool,
-    obfuscate: bool,
-    notify: bool,
-    autoconnect: bool,
-    ipv6: bool,
-    dns: Vec<IpAddr>,
+    pub technology: Technology,
+    pub protocol: Protocol,
+    pub firewall: bool,
+    pub killswitch: bool,
+    pub cybersec: bool,
+    pub obfuscate: bool,
+    pub notify: bool,
+    pub autoconnect: bool,
+    pub ipv6: bool,
+    pub dns: Vec<IpAddr>,
 }
 
 #[allow(deprecated)]
 impl Settings {
+    pub fn update(&mut self) -> CliResult<()> {
+        self.set_technology(self.technology)?;
+        self.set_protocol(self.protocol)?;
+        self.set_firewall(self.firewall)?;
+        self.set_killswitch(self.killswitch)?;
+        self.set_cybersec(self.cybersec)?;
+        self.set_obfuscate(self.obfuscate)?;
+        self.set_notify(self.notify)?;
+        self.set_autoconnect(self.autoconnect)?;
+        self.set_ipv6(self.ipv6)?;
+        self.set_dns(self.dns.clone())?;
+
+        Ok(())
+    }
+
     pub fn set_technology(&mut self, technology: Technology) -> CliResult<&mut Self> {
         set("technology", [technology.to_string().as_str()])?;
         self.technology = technology;
