@@ -57,6 +57,12 @@ byte-unit = "4.0"
 once_cell = "1.9"
 thiserror = "1.0"
 
+[dependencies.const_format]
+version = "0.2"
+features = [
+    "const_generics"
+]
+
 [dependencies.strum]
 version = "0.23"
 features = [
