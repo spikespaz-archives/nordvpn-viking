@@ -1,7 +1,9 @@
 use super::re::{self, RegexError};
 use byte_unit::Byte;
 use chrono::{Duration, NaiveDate};
+use getset::Getters;
 use semver::Version;
+use std::ffi::OsStr;
 use std::net::IpAddr;
 use std::process::{Command, Output};
 use strum;
@@ -21,16 +23,10 @@ pub enum CliError {
     BadOutput(Command),
     #[error("a regex pattern failed to match")]
     RegexError(RegexError, Command),
-}
-
-#[derive(Debug)]
-pub enum ConnectOption {
-    Country(String),
-    Server(String),
-    CountryCode(String),
-    City(String),
-    Group(String),
-    CountryCity(String, String),
+    #[error("setting does not exist")]
+    InvalidSettingName(String),
+    #[error("the provided value for a setting is malformed or invalid")]
+    InvalidSettingValue(String, Vec<String>),
 }
 
 #[derive(Debug)]
@@ -48,6 +44,16 @@ pub struct Connected {
 }
 
 #[derive(Debug)]
+pub enum ConnectOption {
+    Country(String),
+    Server(String),
+    CountryCode(String),
+    City(String),
+    Group(String),
+    CountryCity(String, String),
+}
+
+#[derive(Debug)]
 pub struct Status {
     pub hostname: String,
     pub country: String,
@@ -59,7 +65,7 @@ pub struct Status {
     pub uptime: Duration,
 }
 
-#[derive(Debug, strum::EnumString)]
+#[derive(Debug, strum::Display, strum::EnumString)]
 #[strum(ascii_case_insensitive)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum Technology {
@@ -67,7 +73,7 @@ pub enum Technology {
     NordLynx,
 }
 
-#[derive(Debug, strum::EnumString)]
+#[derive(Debug, strum::Display, strum::EnumString)]
 #[strum(ascii_case_insensitive)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum Protocol {
@@ -264,7 +270,36 @@ pub fn register() -> CliResult<()> {
     todo!();
 }
 
-// pub fn set() {}
+#[deprecated(note = "please use `Settings` methods instead")]
+pub fn set<S, T, V>(setting: S, values: V) -> CliResult<()>
+where
+    S: AsRef<str>,
+    T: AsRef<str>,
+    V: IntoIterator<Item = T>,
+{
+    let values = values.into_iter().collect::<Vec<_>>();
+    let (command, output, stdout) = command(
+        ["nordvpn", "set"]
+            .into_iter()
+            .chain(values.iter().map(AsRef::as_ref)),
+    )?;
+
+    if stdout.contains("The command you entered is not valid.") {
+        return Err(CliError::InvalidSettingValue(
+            setting.as_ref().to_owned(),
+            values
+                .iter()
+                .map(|value| value.as_ref().to_owned())
+                .collect(),
+        ));
+    } else if re::INVALID_SETTING.is_match(&stdout) {
+        return Err(CliError::InvalidSettingName(setting.as_ref().to_owned()));
+    } else if !output.status.success() {
+        return Err(CliError::BadOutput(command));
+    }
+
+    Ok(())
+}
 
 pub fn settings() -> CliResult<()> {
     todo!();
@@ -386,9 +421,98 @@ pub fn version() -> CliResult<Version> {
     Ok(version)
 }
 
-fn command<'a, I>(run: I) -> CliResult<(Command, Output, String)>
+#[derive(Debug, Getters)]
+#[getset(get = "pub")]
+pub struct Settings {
+    technology: Technology,
+    protocol: Protocol,
+    firewall: bool,
+    killswitch: bool,
+    cybersec: bool,
+    obfuscate: bool,
+    notify: bool,
+    autoconnect: bool,
+    ipv6: bool,
+    dns: Vec<IpAddr>,
+}
+
+#[allow(deprecated)]
+impl Settings {
+    pub fn set_technology(&mut self, technology: Technology) -> CliResult<&mut Self> {
+        set("technology", [technology.to_string().as_str()])?;
+        self.technology = technology;
+        Ok(self)
+    }
+
+    pub fn set_protocol(&mut self, protocol: Protocol) -> CliResult<&mut Self> {
+        set("protocol", [protocol.to_string().as_str()])?;
+        self.protocol = protocol;
+        Ok(self)
+    }
+
+    pub fn set_firewall(&mut self, enabled: bool) -> CliResult<&mut Self> {
+        set("firewall", [enabled.to_string().as_str()])?;
+        self.firewall = enabled;
+        Ok(self)
+    }
+
+    pub fn set_killswitch(&mut self, enabled: bool) -> CliResult<&mut Self> {
+        set("killswitch", [enabled.to_string().as_str()])?;
+        self.killswitch = enabled;
+        Ok(self)
+    }
+
+    pub fn set_cybersec(&mut self, enabled: bool) -> CliResult<&mut Self> {
+        set("cybersec", [enabled.to_string().as_str()])?;
+        self.cybersec = enabled;
+        Ok(self)
+    }
+
+    pub fn set_obfuscate(&mut self, enabled: bool) -> CliResult<&mut Self> {
+        set("obfuscate", [enabled.to_string().as_str()])?;
+        self.obfuscate = enabled;
+        Ok(self)
+    }
+
+    pub fn set_notify(&mut self, enabled: bool) -> CliResult<&mut Self> {
+        set("notify", [enabled.to_string().as_str()])?;
+        self.notify = enabled;
+        Ok(self)
+    }
+
+    pub fn set_autoconnect(&mut self, enabled: bool) -> CliResult<&mut Self> {
+        set("autoconnect", [enabled.to_string().as_str()])?;
+        self.autoconnect = enabled;
+        Ok(self)
+    }
+
+    pub fn set_ipv6(&mut self, enabled: bool) -> CliResult<&mut Self> {
+        set("ipv6", [enabled.to_string().as_str()])?;
+        self.ipv6 = enabled;
+        Ok(self)
+    }
+
+    pub fn set_dns<V>(&mut self, addresses: V) -> CliResult<&mut Self>
+    where
+        V: IntoIterator<Item = IpAddr>,
+    {
+        let addresses = addresses.into_iter().collect::<Vec<_>>();
+        set(
+            "dns",
+            addresses
+                .clone()
+                .into_iter()
+                .map(|address| address.to_string()),
+        )?;
+        self.dns = addresses;
+        Ok(self)
+    }
+}
+
+fn command<S, I>(run: I) -> CliResult<(Command, Output, String)>
 where
-    I: IntoIterator<Item = &'a str>,
+    S: AsRef<OsStr>,
+    I: IntoIterator<Item = S>,
 {
     let mut run = run.into_iter();
     let mut command = Command::new(run.next().unwrap());
@@ -398,5 +522,5 @@ where
     let output = command.output()?;
     let stdout = String::from_utf8(output.stdout.clone())?;
 
-    Ok((command, output, stdout.clone()))
+    Ok((command, output, stdout))
 }

@@ -38,6 +38,7 @@ pub static ACCOUNT: Lazy<Regex> = Lazy::new(|| {
 pub static CONNECT: Lazy<Regex> =
     Lazy::new(|| Regex::new(connect::COUNTRY_SERVER_HOSTNAME).unwrap());
 pub static LOGIN: Lazy<Regex> = Lazy::new(|| Regex::new(login::URL).unwrap());
+pub static INVALID_SETTING: Lazy<Regex> = Lazy::new(|| Regex::new(settings::INVALID_NAME).unwrap());
 pub static STATUS: Lazy<Regex> = Lazy::new(|| {
     Regex::new(&format!(
         r#"(?:{}|{}|{}|{}|{}|{}|{}|{})+"#,
@@ -69,6 +70,10 @@ mod strings {
 
     pub mod login {
         pub const URL: &str = r#"Continue in the browser:\s+(?P<url>.+)\s*(?:\n|$)"#;
+    }
+
+    pub mod settings {
+        pub const INVALID_NAME: &str = r#"Command '(?P<name>.+)' doesn't exist."#;
     }
 
     pub mod status {
