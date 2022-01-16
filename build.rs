@@ -1,6 +1,5 @@
 use build_helpers::prelude::*;
 use cargo_toml::Manifest;
-use serde;
 use serde::Deserialize;
 use std::env;
 use std::path::PathBuf;
@@ -14,7 +13,7 @@ struct Metadata {
 }
 
 fn main() {
-    let curr_dir = PathBuf::from(env::current_dir().unwrap());
+    let curr_dir = env::current_dir().unwrap();
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let manifest: Manifest<Metadata> = Manifest::from_path_with_metadata("Cargo.toml").unwrap();
     let metadata = manifest.package.unwrap().metadata.unwrap();
