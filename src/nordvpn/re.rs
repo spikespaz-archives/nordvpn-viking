@@ -31,10 +31,11 @@ pub static CONNECT: Lazy<Regex> =
 pub static LOGIN: Lazy<Regex> = Lazy::new(|| Regex::new(strings::login::URL).unwrap());
 pub static INVALID_SETTING: Lazy<Regex> =
     Lazy::new(|| Regex::new(strings::settings::INVALID_NAME).unwrap());
+pub static SETTINGS: Lazy<Regex> = Lazy::new(|| Regex::new(strings::SETTINGS).unwrap());
 pub static STATUS: Lazy<Regex> = Lazy::new(|| Regex::new(strings::STATUS).unwrap());
 pub static VERSION: Lazy<Regex> = Lazy::new(|| Regex::new(strings::version::VERSION).unwrap());
 
-mod strings {
+pub mod strings {
     use const_format::*;
 
     pub const WORD_LIST: &str = r#"(\w+)(?:,\s*|\s*$)"#;
@@ -44,6 +45,19 @@ mod strings {
         account::EMAIL,
         account::ACTIVE,
         account::EXPIRES
+    );
+    pub const SETTINGS: &str = formatcp!(
+        r#"(?:{}|{}|{}|{}|{}|{}|{}|{}|{}|{})+"#,
+        settings::TECHNOLOGY,
+        settings::PROTOCOL,
+        settings::FIREWALL,
+        settings::KILLSWITCH,
+        settings::CYBERSEC,
+        settings::OBFUSCATE,
+        settings::NOTIFY,
+        settings::AUTOCONNECT,
+        settings::IPV6,
+        settings::DNS,
     );
     pub const STATUS: &str = formatcp!(
         r#"(?:{}|{}|{}|{}|{}|{}|{}|{})+"#,
@@ -63,6 +77,7 @@ mod strings {
             r#"(?P<GROUP_NAME>(?i)(?:[\da-f]{0,4}:){1,7}[\da-f]{0,4}|(?:\d{1,3}\.){3}\d{1,3})"#;
         pub const OPENVPN_OR_NORDLYNX: &str = r#"(?P<GROUP_NAME>(?i)OPENVPN|NORDLYNX)"#;
         pub const TCP_OR_UDP: &str = r#"(?P<GROUP_NAME>(?i)TCP|UDP)"#;
+        pub const ENABLED_OR_DISABLED: &str = r#"(?P<GROUP_NAME>(?i)enabled|disabled)"#;
     }
 
     pub mod account {
@@ -89,7 +104,64 @@ mod strings {
     }
 
     pub mod settings {
+        use super::shared::*;
+        use const_format::*;
+
         pub const INVALID_NAME: &str = r#"Command '(?P<name>.+)' doesn't exist."#;
+
+        pub const TECHNOLOGY: &str = concatcp!(
+            r#"Technology:\s+"#,
+            str_replace!(OPENVPN_OR_NORDLYNX, "GROUP_NAME", "technology"),
+            LINE_END_OR_NEWLINE,
+        );
+        pub const PROTOCOL: &str = concatcp!(
+            r#"Protocol:\s+"#,
+            str_replace!(TCP_OR_UDP, "GROUP_NAME", "protocol"),
+            LINE_END_OR_NEWLINE,
+        );
+        pub const FIREWALL: &str = concatcp!(
+            r#"Firewall:\s+"#,
+            str_replace!(ENABLED_OR_DISABLED, "GROUP_NAME", "firewall"),
+            LINE_END_OR_NEWLINE
+        );
+        pub const KILLSWITCH: &str = concatcp!(
+            r#"Kill Switch:\s+"#,
+            str_replace!(ENABLED_OR_DISABLED, "GROUP_NAME", "killswitch"),
+            LINE_END_OR_NEWLINE
+        );
+        pub const CYBERSEC: &str = concatcp!(
+            r#"CyberSec:\s+"#,
+            str_replace!(ENABLED_OR_DISABLED, "GROUP_NAME", "cybersec"),
+            LINE_END_OR_NEWLINE
+        );
+        pub const OBFUSCATE: &str = concatcp!(
+            r#"Obfuscate:\s+"#,
+            str_replace!(ENABLED_OR_DISABLED, "GROUP_NAME", "obfuscate"),
+            LINE_END_OR_NEWLINE
+        );
+        pub const NOTIFY: &str = concatcp!(
+            r#"Notify:\s+"#,
+            str_replace!(ENABLED_OR_DISABLED, "GROUP_NAME", "notify"),
+            LINE_END_OR_NEWLINE
+        );
+        pub const AUTOCONNECT: &str = concatcp!(
+            r#"Auto-connect:\s+"#,
+            str_replace!(ENABLED_OR_DISABLED, "GROUP_NAME", "autoconnect"),
+            LINE_END_OR_NEWLINE
+        );
+        pub const IPV6: &str = concatcp!(
+            r#"IPv6:\s+"#,
+            str_replace!(ENABLED_OR_DISABLED, "GROUP_NAME", "ipv6"),
+            LINE_END_OR_NEWLINE
+        );
+        pub const DNS: &str = formatcp!(
+            r#"DNS:\s+(?:{}|(?:{}(?:,\s+)?)?(?:{}(?:,\s+)?)?{}?){}"#,
+            str_replace!(ENABLED_OR_DISABLED, "GROUP_NAME", "dns_disabled"),
+            str_replace!(IPV4_OR_IPV6, "GROUP_NAME", "dns_primary"),
+            str_replace!(IPV4_OR_IPV6, "GROUP_NAME", "dns_secondary"),
+            str_replace!(IPV4_OR_IPV6, "GROUP_NAME", "dns_tertiary"),
+            LINE_END_OR_NEWLINE
+        );
     }
 
     pub mod status {
@@ -149,4 +221,12 @@ pub fn parse_list(text: &str) -> Option<Vec<String>> {
     let items = captures.map(|capture| capture.get(1).unwrap().as_str().to_owned());
 
     Some(items.collect())
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn print_dns_pattern() {
+        println!("DNS PATTERN: {}", super::strings::settings::DNS);
+    }
 }
