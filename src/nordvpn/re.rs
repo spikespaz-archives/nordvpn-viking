@@ -12,6 +12,17 @@ pub enum RegexError {
     Countries,
     Groups,
     Login,
+    Settings,
+    SettingsTechnology,
+    SettingsProtocol,
+    SettingsFirewall,
+    SettingsKillswitch,
+    SettingsCybersec,
+    SettingsObfuscate,
+    SettingsNotify,
+    SettingsAutoconnect,
+    SettingsIpv6,
+    SettingsDns,
     Status,
     StatusHostname,
     StatusCountry,
@@ -226,7 +237,17 @@ pub fn parse_list(text: &str) -> Option<Vec<String>> {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn print_dns_pattern() {
-        println!("DNS PATTERN: {}", super::strings::settings::DNS);
+    fn print_account_pattern() {
+        println!("Account Pattern: {}", super::strings::ACCOUNT);
+    }
+
+    #[test]
+    fn print_settings_pattern() {
+        println!("Settings Pattern: {}", super::strings::SETTINGS);
+    }
+
+    #[test]
+    fn print_status_pattern() {
+        println!("Status Pattern: {}", super::strings::STATUS);
     }
 }
