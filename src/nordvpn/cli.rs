@@ -2,6 +2,7 @@ use super::re::{self, RegexError};
 use byte_unit::Byte;
 use chrono::{Duration, NaiveDate};
 use semver::Version;
+use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::net::IpAddr;
 use std::process::{Command, Output};
@@ -527,7 +528,7 @@ pub struct Settings {
     pub notify: bool,
     pub autoconnect: bool,
     pub ipv6: bool,
-    pub dns: Option<Vec<IpAddr>>,
+    pub dns: Option<HashSet<IpAddr>>,
 }
 
 #[allow(deprecated)]
@@ -610,7 +611,7 @@ impl Settings {
         V: IntoIterator<Item = IpAddr>,
     {
         if let Some(addresses) = addresses {
-            let addresses = addresses.into_iter().collect::<Vec<_>>();
+            let addresses = addresses.into_iter().collect::<HashSet<_>>();
             set(
                 "dns",
                 addresses
