@@ -322,10 +322,9 @@ pub fn settings() -> CliResult<Settings> {
                 ));
             }
         },
-        protocol: match captures.name("protocol") {
-            Some(protocol) => protocol.as_str().parse::<Protocol>().unwrap(),
-            None => return Err(CliError::RegexError(RegexError::SettingsProtocol, command)),
-        },
+        protocol: captures
+            .name("protocol")
+            .map(|protocol| protocol.as_str().parse::<Protocol>().unwrap()),
         firewall: match captures.name("firewall") {
             Some(firewall) => firewall.as_str().to_lowercase() == "enabled",
             None => return Err(CliError::RegexError(RegexError::SettingsFirewall, command)),
@@ -384,8 +383,14 @@ pub fn settings() -> CliResult<Settings> {
         },
     };
 
-    if settings.technology != Technology::OpenVpn && settings.obfuscate.is_none() {
-        return Err(CliError::RegexError(RegexError::SettingsObfuscate, command));
+    if settings.technology == Technology::OpenVpn {
+        if settings.protocol.is_none() {
+            return Err(CliError::RegexError(RegexError::SettingsProtocol, command));
+        }
+
+        if settings.obfuscate.is_none() {
+            return Err(CliError::RegexError(RegexError::SettingsObfuscate, command));
+        }
     }
 
     if settings.dns.is_some() && settings.dns.as_ref().unwrap().is_empty() {
@@ -514,7 +519,7 @@ pub fn version() -> CliResult<Version> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Settings {
     pub technology: Technology,
-    pub protocol: Protocol,
+    pub protocol: Option<Protocol>,
     pub firewall: bool,
     pub killswitch: bool,
     pub cybersec: bool,
@@ -529,11 +534,15 @@ pub struct Settings {
 impl Settings {
     pub fn update(&mut self) -> CliResult<()> {
         self.set_technology(self.technology)?;
-        self.set_protocol(self.protocol)?;
+        if let Some(protocol) = self.protocol {
+            self.set_protocol(protocol)?;
+        }
         self.set_firewall(self.firewall)?;
         self.set_killswitch(self.killswitch)?;
         self.set_cybersec(self.cybersec)?;
-        self.set_obfuscate(self.obfuscate)?;
+        if let Some(obfuscate) = self.obfuscate {
+            self.set_obfuscate(obfuscate)?;
+        }
         self.set_notify(self.notify)?;
         self.set_autoconnect(self.autoconnect)?;
         self.set_ipv6(self.ipv6)?;
@@ -550,7 +559,7 @@ impl Settings {
 
     pub fn set_protocol(&mut self, protocol: Protocol) -> CliResult<&mut Self> {
         set("protocol", [protocol.to_string().as_str()])?;
-        self.protocol = protocol;
+        self.protocol = Some(protocol);
         Ok(self)
     }
 
@@ -572,13 +581,9 @@ impl Settings {
         Ok(self)
     }
 
-    pub fn set_obfuscate(&mut self, enabled: Option<bool>) -> CliResult<&mut Self> {
-        if let Some(enabled) = enabled {
-            set("obfuscate", [enabled.to_string().as_str()])?;
-        } else {
-            set("obfuscate", ["false"])?;
-        }
-        self.obfuscate = enabled;
+    pub fn set_obfuscate(&mut self, enabled: bool) -> CliResult<&mut Self> {
+        set("obfuscate", [enabled.to_string().as_str()])?;
+        self.obfuscate = Some(enabled);
         Ok(self)
     }
 
