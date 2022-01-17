@@ -427,11 +427,11 @@ pub struct Settings {
     pub firewall: bool,
     pub killswitch: bool,
     pub cybersec: bool,
-    pub obfuscate: bool,
+    pub obfuscate: Option<bool>,
     pub notify: bool,
     pub autoconnect: bool,
     pub ipv6: bool,
-    pub dns: Vec<IpAddr>,
+    pub dns: Option<Vec<IpAddr>>,
 }
 
 #[allow(deprecated)]
@@ -481,8 +481,12 @@ impl Settings {
         Ok(self)
     }
 
-    pub fn set_obfuscate(&mut self, enabled: bool) -> CliResult<&mut Self> {
-        set("obfuscate", [enabled.to_string().as_str()])?;
+    pub fn set_obfuscate(&mut self, enabled: Option<bool>) -> CliResult<&mut Self> {
+        if let Some(enabled) = enabled {
+            set("obfuscate", [enabled.to_string().as_str()])?;
+        } else {
+            set("obfuscate", ["false"])?;
+        }
         self.obfuscate = enabled;
         Ok(self)
     }
@@ -505,19 +509,24 @@ impl Settings {
         Ok(self)
     }
 
-    pub fn set_dns<V>(&mut self, addresses: V) -> CliResult<&mut Self>
+    pub fn set_dns<V>(&mut self, addresses: Option<V>) -> CliResult<&mut Self>
     where
         V: IntoIterator<Item = IpAddr>,
     {
-        let addresses = addresses.into_iter().collect::<Vec<_>>();
-        set(
-            "dns",
-            addresses
-                .clone()
-                .into_iter()
-                .map(|address| address.to_string()),
-        )?;
-        self.dns = addresses;
+        if let Some(addresses) = addresses {
+            let addresses = addresses.into_iter().collect::<Vec<_>>();
+            set(
+                "dns",
+                addresses
+                    .clone()
+                    .into_iter()
+                    .map(|address| address.to_string()),
+            )?;
+            self.dns = Some(addresses);
+        } else {
+            set("dns", ["false"])?;
+            self.dns = None;
+        }
         Ok(self)
     }
 }
