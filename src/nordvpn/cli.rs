@@ -278,7 +278,7 @@ where
 {
     let values = values.into_iter().collect::<Vec<_>>();
     let (command, output, stdout) = command(
-        ["nordvpn", "set"]
+        ["nordvpn", "set", setting.as_ref()]
             .into_iter()
             .chain(values.iter().map(AsRef::as_ref)),
     )?;
