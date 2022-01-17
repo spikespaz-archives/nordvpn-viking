@@ -28,21 +28,21 @@ pub enum CliError {
     InvalidSettingValue(String, Vec<String>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Account {
     pub email: String,
     pub active: bool,
     pub expires: NaiveDate,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Connected {
     pub country: String,
     pub server: u32,
     pub hostname: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ConnectOption {
     Country(String),
     Server(String),
@@ -52,7 +52,7 @@ pub enum ConnectOption {
     CountryCity(String, String),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Status {
     pub hostname: String,
     pub country: String,
@@ -64,7 +64,7 @@ pub struct Status {
     pub uptime: Duration,
 }
 
-#[derive(Debug, Copy, Clone, strum::Display, strum::EnumString)]
+#[derive(Debug, Copy, Clone, PartialEq, strum::Display, strum::EnumString)]
 #[strum(ascii_case_insensitive)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum Technology {
@@ -72,7 +72,7 @@ pub enum Technology {
     NordLynx,
 }
 
-#[derive(Debug, Copy, Clone, strum::Display, strum::EnumString)]
+#[derive(Debug, Copy, Clone, PartialEq, strum::Display, strum::EnumString)]
 #[strum(ascii_case_insensitive)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum Protocol {
@@ -80,7 +80,7 @@ pub enum Protocol {
     Udp,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Transfer {
     pub received: Byte,
     pub sent: Byte,
@@ -420,7 +420,7 @@ pub fn version() -> CliResult<Version> {
     Ok(version)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Settings {
     pub technology: Technology,
     pub protocol: Protocol,
