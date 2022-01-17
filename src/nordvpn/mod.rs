@@ -43,4 +43,10 @@ mod tests {
         let status = super::status().unwrap();
         println!("Status: {:#?}", status);
     }
+
+    #[test]
+    fn test_settings() {
+        let settings = super::settings().unwrap();
+        println!("Settings: {:#?}", settings);
+    }
 }

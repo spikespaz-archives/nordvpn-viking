@@ -300,8 +300,99 @@ where
     Ok(())
 }
 
-pub fn settings() -> CliResult<()> {
-    todo!();
+pub fn settings() -> CliResult<Settings> {
+    let (command, output, stdout) = command(["nordvpn", "settings"])?;
+
+    if !output.status.success() {
+        return Err(CliError::FailedCommand(command));
+    }
+
+    let captures = match re::SETTINGS.captures(&stdout) {
+        Some(captures) => captures,
+        None => return Err(CliError::RegexError(RegexError::Status, command)),
+    };
+
+    let settings = Settings {
+        technology: match captures.name("technology") {
+            Some(technology) => technology.as_str().parse::<Technology>().unwrap(),
+            None => {
+                return Err(CliError::RegexError(
+                    RegexError::SettingsTechnology,
+                    command,
+                ));
+            }
+        },
+        protocol: match captures.name("protocol") {
+            Some(protocol) => protocol.as_str().parse::<Protocol>().unwrap(),
+            None => return Err(CliError::RegexError(RegexError::SettingsProtocol, command)),
+        },
+        firewall: match captures.name("firewall") {
+            Some(firewall) => firewall.as_str().to_lowercase() == "enabled",
+            None => return Err(CliError::RegexError(RegexError::SettingsFirewall, command)),
+        },
+        killswitch: match captures.name("killswitch") {
+            Some(killswitch) => killswitch.as_str().to_lowercase() == "enabled",
+            None => {
+                return Err(CliError::RegexError(
+                    RegexError::SettingsKillswitch,
+                    command,
+                ));
+            }
+        },
+        cybersec: match captures.name("cybersec") {
+            Some(cybersec) => cybersec.as_str().to_lowercase() == "enabled",
+            None => return Err(CliError::RegexError(RegexError::SettingsCybersec, command)),
+        },
+        obfuscate: captures
+            .name("obfuscate")
+            .map(|obfuscate| obfuscate.as_str().to_lowercase() == "enabled"),
+        notify: match captures.name("notify") {
+            Some(notify) => notify.as_str().to_lowercase() == "enabled",
+            None => return Err(CliError::RegexError(RegexError::SettingsNotify, command)),
+        },
+        autoconnect: match captures.name("autoconnect") {
+            Some(autoconnect) => autoconnect.as_str().to_lowercase() == "enabled",
+            None => {
+                return Err(CliError::RegexError(
+                    RegexError::SettingsAutoconnect,
+                    command,
+                ));
+            }
+        },
+        ipv6: match captures.name("ipv6") {
+            Some(ipv6) => ipv6.as_str().to_lowercase() == "enabled",
+            None => return Err(CliError::RegexError(RegexError::SettingsIpv6, command)),
+        },
+        dns: match captures.name("dns_disabled") {
+            Some(disabled) => {
+                if disabled.as_str().to_lowercase() != "disabled" {
+                    return Err(CliError::RegexError(RegexError::SettingsDns, command));
+                }
+
+                None
+            }
+            None => Some(
+                ["dns_primary", "dns_secondary", "dns_tertiary"]
+                    .into_iter()
+                    .filter_map(|name| {
+                        captures
+                            .name(name)
+                            .map(|address| address.as_str().parse::<IpAddr>().unwrap())
+                    })
+                    .collect(),
+            ),
+        },
+    };
+
+    if settings.technology != Technology::OpenVpn && settings.obfuscate.is_none() {
+        return Err(CliError::RegexError(RegexError::SettingsObfuscate, command));
+    }
+
+    if settings.dns.is_some() && settings.dns.as_ref().unwrap().is_empty() {
+        return Err(CliError::RegexError(RegexError::SettingsDns, command));
+    }
+
+    Ok(settings)
 }
 
 pub fn status() -> CliResult<Option<Status>> {
