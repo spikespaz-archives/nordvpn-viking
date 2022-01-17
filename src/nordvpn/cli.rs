@@ -578,6 +578,7 @@ impl Settings {
 
     pub fn set_cybersec(&mut self, enabled: bool) -> CliResult<&mut Self> {
         set("cybersec", [enabled.to_string().as_str()])?;
+        self.dns = None;
         self.cybersec = enabled;
         Ok(self)
     }
@@ -596,6 +597,7 @@ impl Settings {
 
     pub fn set_autoconnect(&mut self, enabled: bool) -> CliResult<&mut Self> {
         set("autoconnect", [enabled.to_string().as_str()])?;
+        self.notify = false;
         self.autoconnect = enabled;
         Ok(self)
     }
@@ -619,6 +621,7 @@ impl Settings {
                     .into_iter()
                     .map(|address| address.to_string()),
             )?;
+            self.cybersec = false;
             self.dns = Some(addresses);
         } else {
             set("dns", ["false"])?;
